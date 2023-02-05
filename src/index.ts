@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express from "express";
 import path from "path";
-import cors from "cors";
 import helmet from "helmet";
 import {
     S3Client,
@@ -19,7 +18,7 @@ const inputBucket = new S3Client({
         accessKeyId: process.env.AWS_ACCESS_KEY!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
-    region: "eu-west-2",
+    region: process.env.AWS_BUCKET_REGION!,
 });
 
 const app = express();

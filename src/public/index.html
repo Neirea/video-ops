@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Video uploader</title>
+        <link rel="stylesheet" href="style.css" />
+        <script src="main.js" defer></script>
+    </head>
+    <body>
+        <h1>Video Uploader</h1>
+        <div class="file-container">
+            <label class="file-label" for="file">Choose File</label>
+            <div id="file-selected">&nbsp;</div>
+            <input
+                type="file"
+                id="file"
+                accept="video/mp4,video/x-m4v,video/*"
+            />
+        </div>
+
+        <button id="btn-upload">Read & Upload</button>
+        <div id="output"></div>
+    </body>
+</html>
+
+<!-- <input type="file" /> -->

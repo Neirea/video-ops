@@ -10,15 +10,17 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { orderBy } from "lodash";
+// Imports the Google Cloud client library
 
-const BUCKET_NAME = process.env.AWS_BUCKET_NAME!;
+const BUCKET_NAME = process.env.GCP_BUCKET_NAME!;
 
-const inputBucket = new S3Client({
+const bucketClient = new S3Client({
+    endpoint: "https://storage.googleapis.com",
     credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        accessKeyId: process.env.GCP_ACCESS_KEY!,
+        secretAccessKey: process.env.GCP_SECRET_ACCESS_KEY!,
     },
-    region: process.env.AWS_BUCKET_REGION!,
+    region: process.env.GCP_BUCKET_REGION!,
 });
 
 const app = express();
@@ -29,22 +31,19 @@ const app = express();
             contentSecurityPolicy: false,
         })
     );
-    // app.use(cors());
     app.use(express.json());
     app.use("/", express.static(path.join(__dirname, "public")));
 
     const port = process.env.PORT || 5000;
 
     app.post("/create-upload", async (req, res) => {
-        console.log(req.body);
-
         const name = req.body.name;
         const command = new CreateMultipartUploadCommand({
             Bucket: BUCKET_NAME,
             Key: name,
         });
 
-        const { UploadId, Key } = await inputBucket.send(command);
+        const { UploadId, Key } = await bucketClient.send(command);
 
         res.json({ UploadId, Key });
     });
@@ -60,8 +59,7 @@ const app = express();
                 UploadId,
                 PartNumber: index + 1,
             });
-
-            promises.push(getSignedUrl(inputBucket, command));
+            promises.push(getSignedUrl(bucketClient, command));
         }
 
         const signedUrls = await Promise.all(promises);
@@ -80,17 +78,18 @@ const app = express();
     app.post("/complete-upload", async (req, res) => {
         const { Key, UploadId, parts } = req.body;
 
+        // ordering the parts to make sure they are in the right order
+        const Parts = orderBy(parts, ["PartNumber"], ["asc"]);
+
         const command = new CompleteMultipartUploadCommand({
             Bucket: BUCKET_NAME,
             Key,
             UploadId,
             MultipartUpload: {
-                // ordering the parts to make sure they are in the right order
-                Parts: orderBy(parts, ["PartNumber"], ["asc"]),
+                Parts,
             },
         });
-        const result = await inputBucket.send(command);
-        console.log(result);
+        await bucketClient.send(command);
         res.json({ success: true });
     });
 

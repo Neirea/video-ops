@@ -10,7 +10,6 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { orderBy } from "lodash";
-// Imports the Google Cloud client library
 
 const BUCKET_NAME = process.env.GCP_BUCKET_NAME!;
 

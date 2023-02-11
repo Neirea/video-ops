@@ -14,9 +14,17 @@ f.addEventListener("change", (e) => {
 btnUpload.addEventListener("click", () => {
     const fileReader = new FileReader();
     const theFile = f.files[0];
+    const fileSize = theFile.size;
     fileReader.onload = async (ev) => {
-        const CHUNK_SIZE = 5242880; //5Mb
+        //check if file is bigger than 2GB
+        if (ev.target.result.byteLength > 2147483648) return;
+        let CHUNK_SIZE = 10485760; //10Mb - min size for chunk
         const BATCH_SIZE = 15;
+
+        //if file is larger than 150Mb split into 15 chunks for parallel requests
+        if (fileSize > BATCH_SIZE * CHUNK_SIZE) {
+            CHUNK_SIZE = Math.floor(fileSize / (BATCH_SIZE - 1));
+        }
         const chunkCount = Math.ceil(ev.target.result.byteLength / CHUNK_SIZE);
 
         const fileTypes = ["mp4", "mkv", "avi", "mov"];
@@ -56,8 +64,8 @@ btnUpload.addEventListener("click", () => {
             const { parts } = await uploadUrlsResult.json();
 
             //result of s3 responses
-            const results = [];
             const chunksArray = [];
+            const batchRequests = [];
 
             for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
                 const chunk = ev.target.result.slice(
@@ -68,33 +76,26 @@ btnUpload.addEventListener("click", () => {
             }
             divOutput.textContent = "0%";
             btnUpload.setAttribute("disabled", "");
-            //send requests in BATCH_SIZE batches for optimization
-            for (let i = 0; i < chunksArray.length; i += BATCH_SIZE) {
-                const batch = chunksArray.slice(i, i + BATCH_SIZE);
-                const batchRequests = [];
-                batch.forEach((item, idx) => {
-                    batchRequests.push(
-                        fetch(parts[idx].signedUrl, {
-                            method: "PUT",
-                            body: item,
-                        })
-                    );
-                });
-                results.push(...(await Promise.all(batchRequests)));
-                //show progress of uploading
-                divOutput.textContent =
-                    Math.floor(
-                        (batchRequests.length * 100) / chunksArray.length
-                    ) + "%";
-            }
-            btnUpload.removeAttribute("disabled");
 
-            const testParts = results.map((item, idx) => {
+            //send requests in BATCH_SIZE batches for optimization
+            chunksArray.forEach((item, idx) => {
+                batchRequests.push(
+                    fetch(parts[idx].signedUrl, {
+                        method: "PUT",
+                        body: item,
+                    })
+                );
+            });
+            const batchResult = await Promise.all(batchRequests);
+            const results = batchResult.map((item, idx) => {
                 return {
                     ETag: item.headers.get("ETag"),
                     PartNumber: idx + 1,
                 };
             });
+            //show progress of uploading
+            divOutput.textContent = "Loading...";
+            btnUpload.removeAttribute("disabled");
 
             //finish uploading
             const completeResult = await fetch(
@@ -103,18 +104,16 @@ btnUpload.addEventListener("click", () => {
                     method: "POST",
                     headers: {
                         "content-type": "application/json",
-                        "file-id": UploadId,
-                        "file-name": fileName,
                     },
                     body: JSON.stringify({
                         Key,
                         UploadId,
-                        parts: testParts,
+                        parts: results,
                     }),
                 }
             );
-            const result = await completeResult.json();
-            console.log(result);
+            await completeResult.json();
+            divOutput.textContent = "Complete!";
         } else {
             divOutput.textContent = "Wrong file format";
         }

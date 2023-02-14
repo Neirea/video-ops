@@ -37,4 +37,4 @@ jobs:
               run: railway up
               working-directory: ./app
               env:
-                  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+                  RAILWAY_TOKEN: ${{ secrets.RAILWAY_APP_TOKEN }}

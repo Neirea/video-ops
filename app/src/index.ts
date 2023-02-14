@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "express-async-errors";
 import express from "express";
 import path from "path";
 import helmet from "helmet";

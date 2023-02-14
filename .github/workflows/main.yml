@@ -4,23 +4,36 @@ on:
         branches:
             - main
         paths-ignore:
-            - "app/**"
             - "README.md"
 defaults:
-    run:
-        working-directory: ./video-process-app
+    env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 jobs:
-    deploy:
-        name: Deploy app
+    deploy_vp:
+        name: Deploy Video Processing App
         runs-on: ubuntu-latest
         steps:
+            working-directory: ./video-process-app
             - uses: actions/checkout@v3
             - uses: actions/setup-node@v3
-              with:
-                  node-version: 16
+            with:
+                node-version: 16
             - run: npm ci
             - run: npm i -g @railway/cli
             - name: Deploy
               run: railway up
-              env:
-                  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    deploy_app:
+        name: Deploy App
+        runs-on: ubuntu-latest
+        steps:
+            working-directory: ./app
+            - uses: actions/checkout@v3
+            - uses: actions/setup-node@v3
+            with:
+                node-version: 16
+            - run: npm ci
+            - run: npm i -g @railway/cli
+            - name: Deploy
+              run: railway up
+
+

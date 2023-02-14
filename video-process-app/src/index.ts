@@ -2,15 +2,17 @@ import "dotenv/config";
 import "express-async-errors";
 import express from "express";
 import https from "https";
-// import path from "path";
 import fs from "fs/promises";
 import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import { Storage } from "@google-cloud/storage";
+import mongoose from "mongoose";
+import Video from "./model";
 
 const app = express();
+
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
     credentials: {
@@ -26,6 +28,7 @@ const storage = new Storage({
 
 const bucket_raw = storage.bucket("raw-video-streaming");
 const bucket_prod = storage.bucket("prod-video-streaming");
+mongoose.connect(process.env.MONGO_URL!);
 
 app.set("trust proxy", true);
 
@@ -40,7 +43,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         Buffer.from(req.body.message.data, "base64").toString().trim()
     );
     const fileName = data.name;
-    console.log(`File name:${fileName}`);
+    console.log(`File name: ${fileName}`);
     //get file out of storage
     const tmpInputFile = `input-${fileName}`;
     await bucket_raw.file(fileName).download({ destination: tmpInputFile });
@@ -48,16 +51,21 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     //check if input file is video file
     ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
         if (err) {
-            // https.get({
-            //     url: "http://my-website-url.com/video-processes?success=false",
-            //     headers: {
-            //         "Error-Message": err.message,
-            //     },
-            // });
-            console.error("probe failed", info);
+            const myURL = new URL(process.env.APP_URL!);
+            https.get({
+                protocol: "https",
+                hostname: myURL.hostname,
+                path: "/video-processes?success=false",
+                headers: {
+                    "Error-Message": (err as Error).message,
+                },
+            });
+            console.error("ffprobe error:", err.message);
             return;
         }
-        console.log(`Metadata: ${info}`);
+        console.log(
+            `Video file is correct with duration ${info.streams[0].duration}`
+        );
     });
 
     const videoBitrate360 = "1000k";
@@ -83,28 +91,44 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720)
     );
-    Promise.all(commandsBatch)
-        .then(async () => {
-            console.log("Processed all files");
-            await fs.unlink(tmpInputFile);
-            console.log("deleted tmp file");
 
-            await bucket_raw.file(fileName).delete();
-            console.log("deleted bucket input file");
-            // send request to my backend with result of function
-            // https.get(
-            //     "http://my-website-url.com/video-processes?success=true"
-            // );
-        })
-        .catch((err) => {
-            // https.get({
-            //     url: "http://my-website-url.com/video-processes?success=false",
-            //     headers: {
-            //         "Error-Message": err.message,
-            //     },
-            // });
-        });
     res.status(200).send(); // responding earlier to acknowledge message is received
+
+    try {
+        await Promise.all(commandsBatch);
+        console.log("Processed all files");
+
+        await fs.unlink(tmpInputFile);
+        console.log("deleted tmp file");
+
+        await bucket_raw.file(fileName).delete();
+        console.log("deleted bucket input file");
+        //save it to DB
+        bucket_prod.file("");
+        const low = fileName.split(".")[0] + "_360.mp4";
+        const normal = fileName.split(".")[0] + "_480.mp4";
+        const high = fileName.split(".")[0] + "_720.mp4";
+        await Video.create({
+            name: fileName,
+            low: bucket_prod.file(low).publicUrl(),
+            normal: bucket_prod.file(normal).publicUrl(),
+            high: bucket_prod.file(high).publicUrl(),
+        });
+        console.log("saved to database");
+
+        // send request to my backend with result of function
+        https.get(`${process.env.APP_URL}/video-processes?success=true`);
+    } catch (err) {
+        const myURL = new URL(process.env.APP_URL!);
+        https.get({
+            protocol: "https",
+            hostname: myURL.hostname,
+            path: "/video-processes?success=false",
+            headers: {
+                "Error-Message": (err as Error).message,
+            },
+        });
+    }
 
     function ffmpegCommand(
         input: string,
@@ -113,7 +137,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         videoBitrate: string
     ) {
         const outputFileName = `${fileName.split(".")[0]}_${height}.mp4`;
-        console.log("Started processing video!");
         const outputStream = bucket_prod
             .file(outputFileName)
             .createWriteStream();
@@ -130,28 +153,14 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions("-preset fast")
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
-                .on("progress", (progress) => {
-                    console.log(
-                        `Processed time for ${height}p: ${progress.timemark}`
-                    );
-                })
                 .on("finish", async () => {
                     console.log(
                         `Video with resolution ${height}p has been successfully processed!`
                     );
-                    // save to DB id + video links
-                    // ..............
-
                     resolve(outputFileName);
                 })
                 .on("error", (err) => {
                     console.error(`Video Processing Error: ${err.message}`);
-                    // https.get({
-                    //     url: "http://my-website-url.com/video-processes?success=false",
-                    //     headers: {
-                    //         "Error-Message": err.message,
-                    //     },
-                    // });
                     reject(err.message);
                 });
         });

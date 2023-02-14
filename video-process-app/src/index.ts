@@ -16,7 +16,9 @@ const storage = new Storage({
     scopes: "https://www.googleapis.com/auth/cloud-platform",
     credentials: {
         client_email: process.env.GOOGLE_STORAGE_EMAIL,
-        private_key: process.env.GOOGLE_STORAGE_PRIVATE_KEY,
+        private_key: process.env
+            .GOOGLE_STORAGE_PRIVATE_KEY!.split(String.raw`\n`)
+            .join("\n"),
     },
 });
 

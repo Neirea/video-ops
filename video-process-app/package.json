@@ -1,8 +1,7 @@
 {
-    "name": "ffmpeg",
+    "name": "video-process-app",
     "version": "1.0.0",
     "description": "",
-    "main": "app.js",
     "engines": {
         "node": "18.12.1"
     },

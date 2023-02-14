@@ -72,9 +72,38 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const height480 = 480;
 
     //process files
-    ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360);
-    ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480);
-    ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720);
+    const commandsBatch = [];
+
+    commandsBatch.push(
+        ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360)
+    );
+    commandsBatch.push(
+        ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480)
+    );
+    commandsBatch.push(
+        ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720)
+    );
+    try {
+        await Promise.all(commandsBatch);
+        console.log("Processed all files");
+        await fs.unlink(tmpInputFile);
+        console.log("deleting tmp file");
+
+        await bucket_raw.file(fileName).delete();
+        console.log("deleting bucket input file");
+    } catch (err) {
+        // https.get({
+        //     url: "http://my-website-url.com/video-processes?success=false",
+        //     headers: {
+        //         "Error-Message": err.message,
+        //     },
+        // });
+    }
+
+    // send request to my backend with result of function
+    // https.get(
+    //     "http://my-website-url.com/video-processes?success=true"
+    // );
 
     function ffmpegCommand(
         input: string,
@@ -86,47 +115,44 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         console.log("Started processing video!");
         const outputStream = bucket_prod
             .file(outputFileName)
-            .createWriteStream({ chunkSize: 1048576 }); // 1 MB per chunk
-        ffmpeg(input)
-            .setFfmpegPath(ffmpegPath)
-            .videoCodec("libx264")
-            .size(`${width}x${height}`)
-            .fps(30)
-            .videoBitrate(videoBitrate)
-            .audioBitrate(audioBitrate)
-            .autopad()
-            .outputFormat("mp4")
-            .outputOptions("-preset fast")
-            .outputOptions(["-movflags frag_keyframe+empty_moov"])
-            .pipe(outputStream, { end: true })
-            .on("progress", (progress) => {
-                console.log(`Processed frames: ${progress}`);
-            })
-            .on("finish", async () => {
-                console.log(
-                    `Video with resolution ${height}p has been successfully processed!`
-                );
-                // delete raw video input and tmp file
-                await fs.unlink(tmpInputFile);
-                await bucket_raw.file(fileName).delete();
-                // save to DB id + video links
-                // ..............
-                // send request to my backend with result of function
-                // https.get(
-                //     "http://my-website-url.com/video-processes?success=true"
-                // );
-                res.status(200).send();
-            })
-            .on("error", (err) => {
-                console.error(`Video Processing Error: ${err.message}`);
-                // https.get({
-                //     url: "http://my-website-url.com/video-processes?success=false",
-                //     headers: {
-                //         "Error-Message": err.message,
-                //     },
-                // });
-                res.status(200).send();
-            });
+            .createWriteStream();
+        return new Promise((resolve, reject) => {
+            ffmpeg(input)
+                .setFfmpegPath(ffmpegPath)
+                .videoCodec("libx264")
+                .size(`${width}x${height}`)
+                .fps(30)
+                .videoBitrate(videoBitrate)
+                .audioBitrate(audioBitrate)
+                .autopad()
+                .outputFormat("mp4")
+                .outputOptions("-preset fast")
+                .outputOptions(["-movflags frag_keyframe+empty_moov"])
+                .pipe(outputStream, { end: true })
+                .on("progress", (progress) => {
+                    console.log(`Processed frames: ${progress}`);
+                })
+                .on("finish", async () => {
+                    console.log(
+                        `Video with resolution ${height}p has been successfully processed!`
+                    );
+                    // delete raw video input and tmp file
+                    // save to DB id + video links
+                    // ..............
+
+                    resolve(outputFileName);
+                })
+                .on("error", (err) => {
+                    console.error(`Video Processing Error: ${err.message}`);
+                    // https.get({
+                    //     url: "http://my-website-url.com/video-processes?success=false",
+                    //     headers: {
+                    //         "Error-Message": err.message,
+                    //     },
+                    // });
+                    reject(err.message);
+                });
+        });
     }
 });
 

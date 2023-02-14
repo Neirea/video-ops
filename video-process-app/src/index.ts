@@ -83,27 +83,28 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720)
     );
-    try {
-        await Promise.all(commandsBatch);
-        console.log("Processed all files");
-        await fs.unlink(tmpInputFile);
-        console.log("deleting tmp file");
+    Promise.all(commandsBatch)
+        .then(async () => {
+            console.log("Processed all files");
+            await fs.unlink(tmpInputFile);
+            console.log("deleted tmp file");
 
-        await bucket_raw.file(fileName).delete();
-        console.log("deleting bucket input file");
-    } catch (err) {
-        // https.get({
-        //     url: "http://my-website-url.com/video-processes?success=false",
-        //     headers: {
-        //         "Error-Message": err.message,
-        //     },
-        // });
-    }
-
-    // send request to my backend with result of function
-    // https.get(
-    //     "http://my-website-url.com/video-processes?success=true"
-    // );
+            await bucket_raw.file(fileName).delete();
+            console.log("deleted bucket input file");
+            // send request to my backend with result of function
+            // https.get(
+            //     "http://my-website-url.com/video-processes?success=true"
+            // );
+        })
+        .catch((err) => {
+            // https.get({
+            //     url: "http://my-website-url.com/video-processes?success=false",
+            //     headers: {
+            //         "Error-Message": err.message,
+            //     },
+            // });
+        });
+    res.status(200).send(); // responding earlier to acknowledge message is received
 
     function ffmpegCommand(
         input: string,
@@ -130,13 +131,14 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
                 .on("progress", (progress) => {
-                    console.log(`Processed frames: ${progress}`);
+                    console.log(
+                        `Processed time for ${height}p: ${progress.timemark}`
+                    );
                 })
                 .on("finish", async () => {
                     console.log(
                         `Video with resolution ${height}p has been successfully processed!`
                     );
-                    // delete raw video input and tmp file
                     // save to DB id + video links
                     // ..............
 

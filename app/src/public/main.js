@@ -36,31 +36,25 @@ btnUpload.addEventListener("click", () => {
 
         if (isSuccess) {
             //initialize upload
-            const uploadResult = await fetch(
-                "http://localhost:5000/create-upload",
-                {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({
-                        name: fileName,
-                    }),
-                }
-            );
+            const uploadResult = await fetch("/create-upload", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    name: fileName,
+                }),
+            });
             const { UploadId, Key } = await uploadResult.json();
 
             //get urls for client to upload file chunks
-            const uploadUrlsResult = await fetch(
-                "http://localhost:5000/get-upload-urls",
-                {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({
-                        UploadId,
-                        Key,
-                        parts: chunkCount,
-                    }),
-                }
-            );
+            const uploadUrlsResult = await fetch("/get-upload-urls", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    UploadId,
+                    Key,
+                    parts: chunkCount,
+                }),
+            });
             const { parts } = await uploadUrlsResult.json();
 
             //result of s3 responses
@@ -98,20 +92,17 @@ btnUpload.addEventListener("click", () => {
             btnUpload.removeAttribute("disabled");
 
             //finish uploading
-            const completeResult = await fetch(
-                "http://localhost:5000/complete-upload",
-                {
-                    method: "POST",
-                    headers: {
-                        "content-type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        Key,
-                        UploadId,
-                        parts: results,
-                    }),
-                }
-            );
+            const completeResult = await fetch("/complete-upload", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                    Key,
+                    UploadId,
+                    parts: results,
+                }),
+            });
             await completeResult.json();
             divOutput.textContent = "Complete!";
         } else {

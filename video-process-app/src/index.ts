@@ -13,12 +13,12 @@ import { Storage } from "@google-cloud/storage";
 const app = express();
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
-    scopes: "https://www.googleapis.com/auth/cloud-platform",
     credentials: {
+        type: "service_account",
+        private_key: process.env.GOOGLE_STORAGE_PRIVATE_KEY,
         client_email: process.env.GOOGLE_STORAGE_EMAIL,
-        private_key: process.env
-            .GOOGLE_STORAGE_PRIVATE_KEY!.split(String.raw`\n`)
-            .join("\n"),
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        token_url: "https://oauth2.googleapis.com/token",
     },
 });
 

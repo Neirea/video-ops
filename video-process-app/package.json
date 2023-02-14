@@ -8,7 +8,7 @@
     },
     "scripts": {
         "start": "node build/index.js",
-        "build": "tsc -p",
+        "build": "tsc -p .",
         "dev": "tsnd --respawn ./src/index.ts"
     },
     "keywords": [],

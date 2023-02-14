@@ -1,6 +1,9 @@
 [
     {
-        "origin": ["http://localhost:5000"],
+        "origin": [
+            "http://localhost:5000",
+            "https://video-streaming-demo.up.railway.app"
+        ],
         "method": ["GET", "PUT", "DELETE"],
         "responseHeader": ["*"],
         "maxAgeSeconds": 3600

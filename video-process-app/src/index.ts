@@ -28,6 +28,8 @@ const storage = new Storage({
 
 const bucket_raw = storage.bucket("raw-video-streaming");
 const bucket_prod = storage.bucket("prod-video-streaming");
+
+mongoose.set("strictQuery", false);
 mongoose.connect(process.env.MONGO_URL!);
 
 app.set("trust proxy", true);
@@ -38,6 +40,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         res.status(400).send();
         return;
     }
+    res.status(200).send(); // responding earlier to acknowledge message is received
     // The pub/sub message is a unicode string encoded in base64.
     const data = JSON.parse(
         Buffer.from(req.body.message.data, "base64").toString().trim()
@@ -49,11 +52,11 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     await bucket_raw.file(fileName).download({ destination: tmpInputFile });
 
     //check if input file is video file
+    let isError = false;
     ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
         if (err) {
             const myURL = new URL(process.env.APP_URL!);
             https.get({
-                protocol: "https",
                 hostname: myURL.hostname,
                 path: "/video-processes?success=false",
                 headers: {
@@ -61,12 +64,15 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 },
             });
             console.error("ffprobe error:", err.message);
+            isError = true;
             return;
         }
         console.log(
             `Video file is correct with duration ${info.streams[0].duration}`
         );
     });
+
+    if (isError) return;
 
     const videoBitrate360 = "1000k";
     const videoBitrate480 = "2500k";
@@ -91,8 +97,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720)
     );
-
-    res.status(200).send(); // responding earlier to acknowledge message is received
 
     try {
         await Promise.all(commandsBatch);
@@ -121,7 +125,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     } catch (err) {
         const myURL = new URL(process.env.APP_URL!);
         https.get({
-            protocol: "https",
             hostname: myURL.hostname,
             path: "/video-processes?success=false",
             headers: {

@@ -93,6 +93,16 @@ const app = express();
         res.json({ success: true });
     });
 
+    app.get("/video-processes", async (req, res) => {
+        const query = req.query.success;
+        if (query === "true") {
+            //send front end success msg
+        } else {
+            const errorMessage = req.headers["Error-Message"];
+            //send front end error msg
+        }
+    });
+
     app.listen(port, () => {
         console.log(`Server is running on port ${port}...`);
     });

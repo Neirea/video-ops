@@ -108,7 +108,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         await bucket_raw.file(fileName).delete();
         console.log("deleted bucket input file");
         //save it to DB
-        bucket_prod.file("");
         const low = `${fileName.split(".")[0]}_360.mp4`;
         const normal = `${fileName.split(".")[0]}_480.mp4`;
         const high = `${fileName.split(".")[0]}_720.mp4`;

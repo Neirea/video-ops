@@ -109,14 +109,22 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         console.log("deleted bucket input file");
         //save it to DB
         bucket_prod.file("");
-        const low = fileName.split(".")[0] + "_360.mp4";
-        const normal = fileName.split(".")[0] + "_480.mp4";
-        const high = fileName.split(".")[0] + "_720.mp4";
+        const low = `${fileName.split(".")[0]}_360.mp4`;
+        const normal = `${fileName.split(".")[0]}_480.mp4`;
+        const high = `${fileName.split(".")[0]}_720.mp4`;
+
+        const url_low = bucket_prod.file(low).publicUrl();
+        const url_normal = bucket_prod.file(normal).publicUrl();
+        const url_high = bucket_prod.file(high).publicUrl();
+        console.log(url_low);
+        console.log(url_normal);
+        console.log(url_high);
+
         await Video.create({
             name: fileName,
-            low: bucket_prod.file(low).publicUrl(),
-            normal: bucket_prod.file(normal).publicUrl(),
-            high: bucket_prod.file(high).publicUrl(),
+            low: url_low,
+            normal: url_normal,
+            high: url_high,
         });
         console.log("saved to database");
 

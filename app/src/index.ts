@@ -1,16 +1,16 @@
-import "dotenv/config";
-import "express-async-errors";
-import express from "express";
-import path from "path";
-import helmet from "helmet";
 import {
-    S3Client,
-    CreateMultipartUploadCommand,
-    UploadPartCommand,
     CompleteMultipartUploadCommand,
+    CreateMultipartUploadCommand,
+    S3Client,
+    UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import "dotenv/config";
+import express from "express";
+import "express-async-errors";
+import helmet from "helmet";
 import { orderBy } from "lodash";
+import path from "path";
 
 const BUCKET_NAME = process.env.GCP_BUCKET_NAME!;
 
@@ -91,16 +91,6 @@ const app = express();
         });
         await bucketClient.send(command);
         res.json({ success: true });
-    });
-
-    app.get("/video-processes", async (req, res) => {
-        const query = req.query.success;
-        if (query === "true") {
-            //send front end success msg
-        } else {
-            const errorMessage = req.headers["Error-Message"];
-            //send front end error msg
-        }
     });
 
     app.listen(port, () => {

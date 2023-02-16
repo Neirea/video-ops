@@ -1,17 +1,28 @@
-import "dotenv/config";
-import "express-async-errors";
-import express from "express";
-import https from "https";
-import fs from "fs/promises";
 import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
+import { Storage } from "@google-cloud/storage";
+import "dotenv/config";
+import express from "express";
+import "express-async-errors";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
-import { Storage } from "@google-cloud/storage";
+import fs from "fs/promises";
+import http from "http";
 import mongoose from "mongoose";
+import { Server } from "socket.io";
 import Video from "./model";
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+io.on("connection", (socket) => {
+    //connect into room that has fileName as ID
+    socket.on("upload", (fileName, cb) => {
+        socket.join(fileName);
+        cb("Initiated upload");
+    });
+});
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -56,13 +67,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
         if (err) {
             const myURL = new URL(process.env.APP_URL!);
-            https.get({
-                hostname: myURL.hostname,
-                path: "/video-processes?success=false",
-                headers: {
-                    "Error-Message": (err as Error).message,
-                },
-            });
+            io.to(fileName).emit("status", { error: err.message });
             console.error("ffprobe error:", err.message);
             isError = true;
             return;
@@ -89,24 +94,42 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const commandsBatch = [];
 
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360)
+        ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360).then(
+            (res) => {
+                io.to(fileName).emit("status", {
+                    status: `${height360}p video has been processed`,
+                });
+                return res;
+            }
+        )
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480)
+        ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480).then(
+            (res) => {
+                io.to(fileName).emit("status", {
+                    status: `${height480}p video has been processed`,
+                });
+                return res;
+            }
+        )
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720)
+        ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720).then(
+            (res) => {
+                io.to(fileName).emit("status", {
+                    status: `${height720}p video has been processed`,
+                });
+                return res;
+            }
+        )
     );
 
     try {
         await Promise.all(commandsBatch);
-        console.log("Processed all files");
 
+        //delete junk
         await fs.unlink(tmpInputFile);
-        console.log("deleted tmp file");
-
         await bucket_raw.file(fileName).delete();
-        console.log("deleted bucket input file");
         //save it to DB
         const low = `${fileName.split(".")[0]}_360.mp4`;
         const normal = `${fileName.split(".")[0]}_480.mp4`;
@@ -115,9 +138,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         const url_low = bucket_prod.file(low).publicUrl();
         const url_normal = bucket_prod.file(normal).publicUrl();
         const url_high = bucket_prod.file(high).publicUrl();
-        console.log(url_low);
-        console.log(url_normal);
-        console.log(url_high);
 
         await Video.create({
             name: fileName,
@@ -125,19 +145,11 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             normal: url_normal,
             high: url_high,
         });
-        console.log("saved to database");
-
-        // send request to my backend with result of function
-        https.get(`${process.env.APP_URL}/video-processes?success=true`);
-    } catch (err) {
-        const myURL = new URL(process.env.APP_URL!);
-        https.get({
-            hostname: myURL.hostname,
-            path: "/video-processes?success=false",
-            headers: {
-                "Error-Message": (err as Error).message,
-            },
+        io.to(fileName).emit("status", {
+            status: "done",
         });
+    } catch (err) {
+        io.to(fileName).emit("status", { error: (err as Error).message });
     }
 
     function ffmpegCommand(
@@ -163,6 +175,11 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions("-preset fast")
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
+                .on("progress", (progress) => {
+                    Object.keys(progress).forEach((key) =>
+                        console.log("key=", key)
+                    );
+                })
                 .on("finish", async () => {
                     console.log(
                         `Video with resolution ${height}p has been successfully processed!`

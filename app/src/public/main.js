@@ -105,6 +105,17 @@ btnUpload.addEventListener("click", () => {
             });
             await completeResult.json();
             divOutput.textContent = "Complete!";
+            //create websocket connection
+            const socket = io("/");
+
+            socket.emit("upload", fileName, (serverStatus) => {
+                divOutput.textContent = serverStatus;
+                console.log(serverStatus);
+            });
+            socket.on(fileName, (serverStatus) => {
+                divOutput.textContent = serverStatus;
+                console.log(serverStatus);
+            });
         } else {
             divOutput.textContent = "Wrong file format";
         }

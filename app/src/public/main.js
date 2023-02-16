@@ -112,8 +112,13 @@ btnUpload.addEventListener("click", () => {
                 divOutput.textContent = serverStatus;
                 console.log(serverStatus);
             });
-            socket.on(fileName, (serverStatus) => {
-                divOutput.textContent = serverStatus;
+            socket.on("status", (data) => {
+                if (data.status === "processed") {
+                    divOutput.textContent = `${data.resolution}p has been processed`;
+                } else {
+                    divOutput.textContent = data.status;
+                }
+
                 console.log(serverStatus);
             });
         } else {

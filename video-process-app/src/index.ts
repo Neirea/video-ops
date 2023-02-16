@@ -72,15 +72,13 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     let isError = false;
     ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
         if (err) {
-            const myURL = new URL(process.env.APP_URL!);
             io.to(fileName).emit("status", { error: err.message });
-            console.error("ffprobe error:", err.message);
             isError = true;
             return;
         }
-        console.log(
-            `Video file is correct with duration ${info.streams[0].duration}`
-        );
+        io.to(fileName).emit("status", {
+            status: `Video file is correct with duration ${info.streams[0].duration}`,
+        });
     });
 
     if (isError) return;
@@ -103,7 +101,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360).then(
             (res) => {
                 io.to(fileName).emit("status", {
-                    status: `${height360}p video has been processed`,
+                    resolution: "360p",
+                    status: "processed",
                 });
                 return res;
             }
@@ -113,7 +112,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480).then(
             (res) => {
                 io.to(fileName).emit("status", {
-                    status: `${height480}p video has been processed`,
+                    resolution: "480p",
+                    status: "processed",
                 });
                 return res;
             }
@@ -123,7 +123,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720).then(
             (res) => {
                 io.to(fileName).emit("status", {
-                    status: `${height720}p video has been processed`,
+                    resolution: "720p",
+                    status: "processed",
                 });
                 return res;
             }

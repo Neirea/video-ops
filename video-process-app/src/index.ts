@@ -11,6 +11,7 @@ import http from "http";
 import mongoose from "mongoose";
 import { Server } from "socket.io";
 import Video from "./model";
+import cors from "cors";
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,7 @@ mongoose.set("strictQuery", false);
 mongoose.connect(process.env.MONGO_URL!);
 
 app.set("trust proxy", true);
+app.use(cors({ origin: process.env.APP_URL }));
 
 app.post("/pubsub/push", express.json(), async (req, res) => {
     if (req.query.token !== process.env.PUBSUB_VERIFICATION_TOKEN) {
@@ -179,13 +181,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions("-preset fast")
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
-                .on("progress", (progress) => {
-                    console.log(
-                        `Content length for ${height}:`,
-                        progress.contentLength
-                    );
-                    console.log("Bytes written:", progress.bytesWritten);
-                })
                 .on("finish", async () => {
                     console.log(
                         `Video with resolution ${height}p has been successfully processed!`

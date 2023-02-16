@@ -197,6 +197,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
 
 // Start the server
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`server is running on port ${PORT}...`);
 });

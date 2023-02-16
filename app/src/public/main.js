@@ -106,7 +106,7 @@ btnUpload.addEventListener("click", () => {
             await completeResult.json();
             divOutput.textContent = "Complete!";
             //create websocket connection
-            const socket = io("/");
+            const socket = io("https://video-process-app.up.railway.app/");
 
             socket.emit("upload", fileName, (serverStatus) => {
                 divOutput.textContent = serverStatus;

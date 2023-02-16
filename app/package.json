@@ -5,7 +5,7 @@
     "main": "index.js",
     "scripts": {
         "start": "node build/index.js",
-        "copy-files": "copyfiles -u 1 src/public/**/* build/",
+        "copy-files": "copyfiles -u 1 src/**/* build/",
         "build": "tsc -p . && npm run copy-files",
         "dev": "tsnd --respawn ./src/index.ts"
     },

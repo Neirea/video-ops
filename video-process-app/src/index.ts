@@ -14,7 +14,11 @@ import Video from "./model";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.APP_URL,
+    },
+});
 
 io.on("connection", (socket) => {
     //connect into room that has fileName as ID
@@ -176,9 +180,11 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
                 .on("progress", (progress) => {
-                    Object.keys(progress).forEach((key) =>
-                        console.log("key=", key)
+                    console.log(
+                        `Content length for ${height}:`,
+                        progress.contentLength
                     );
+                    console.log("Bytes written:", progress.bytesWritten);
                 })
                 .on("finish", async () => {
                     console.log(

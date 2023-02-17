@@ -9,25 +9,27 @@ import ffmpeg from "fluent-ffmpeg";
 import fs from "fs/promises";
 import http from "http";
 import mongoose from "mongoose";
-import { Server } from "socket.io";
 import Video from "./model";
-import cors from "cors";
+import { WebSocket, WebSocketServer } from "ws";
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: process.env.APP_URL,
-    },
-});
+const wss = new WebSocketServer({ server });
+let wsrooms: { [key: string]: WebSocket } = {};
 
-io.on("connection", (socket) => {
-    //connect into room that has fileName as ID
-    socket.on("upload", (fileName, cb) => {
-        socket.join(fileName);
-        cb("Initiated upload");
+wss.on("connection", (socket) => {
+    socket.on("message", (rawData) => {
+        const data = JSON.parse(rawData.toString());
+        //join room based on fileName
+        if (data.type === "upload" && !wsrooms[data.fileName]) {
+            wsrooms[data.fileName] = socket;
+        }
     });
 });
+
+function sendTo(socketId: string, message: string | Object) {
+    wsrooms[socketId].send(JSON.stringify(message));
+}
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -49,7 +51,6 @@ mongoose.set("strictQuery", false);
 mongoose.connect(process.env.MONGO_URL!);
 
 app.set("trust proxy", true);
-app.use(cors({ origin: process.env.APP_URL }));
 
 app.post("/pubsub/push", express.json(), async (req, res) => {
     if (req.query.token !== process.env.PUBSUB_VERIFICATION_TOKEN) {
@@ -72,13 +73,16 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     let isError = false;
     ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
         if (err) {
-            io.to(fileName).emit("status", { error: err.message });
+            sendTo(fileName, { status: "error", msg: err.message });
             isError = true;
             return;
         }
-        io.to(fileName).emit("status", {
-            status: `Video file is correct with duration ${info.streams[0].duration}`,
-        });
+        wsrooms["filename"].send(
+            JSON.stringify({
+                status: "checked",
+                msg: `Video file is correct with duration ${info.streams[0].duration}`,
+            })
+        );
     });
 
     if (isError) return;
@@ -100,9 +104,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360).then(
             (res) => {
-                io.to(fileName).emit("status", {
-                    resolution: "360p",
+                sendTo(fileName, {
                     status: "processed",
+                    msg: `${height360} has been processed`,
                 });
                 return res;
             }
@@ -111,9 +115,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480).then(
             (res) => {
-                io.to(fileName).emit("status", {
-                    resolution: "480p",
+                sendTo(fileName, {
                     status: "processed",
+                    msg: `${height480} has been processed`,
                 });
                 return res;
             }
@@ -122,9 +126,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     commandsBatch.push(
         ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720).then(
             (res) => {
-                io.to(fileName).emit("status", {
-                    resolution: "720p",
+                sendTo(fileName, {
                     status: "processed",
+                    msg: `${height720} has been processed`,
                 });
                 return res;
             }
@@ -152,11 +156,15 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             normal: url_normal,
             high: url_high,
         });
-        io.to(fileName).emit("status", {
+        sendTo(fileName, {
             status: "done",
+            msg: "Uploading is finished",
         });
     } catch (err) {
-        io.to(fileName).emit("status", { error: (err as Error).message });
+        sendTo(fileName, {
+            status: "error",
+            msg: (err as Error).message,
+        });
     }
 
     function ffmpegCommand(
@@ -183,13 +191,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                 .outputOptions(["-movflags frag_keyframe+empty_moov"])
                 .pipe(outputStream, { end: true })
                 .on("finish", async () => {
-                    console.log(
-                        `Video with resolution ${height}p has been successfully processed!`
-                    );
                     resolve(outputFileName);
                 })
                 .on("error", (err) => {
-                    console.error(`Video Processing Error: ${err.message}`);
                     reject(err.message);
                 });
         });

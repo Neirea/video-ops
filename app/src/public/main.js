@@ -106,20 +106,18 @@ btnUpload.addEventListener("click", () => {
             await completeResult.json();
             divOutput.textContent = "Complete!";
             //create websocket connection
-            const socket = io("https://video-process-app.up.railway.app/");
+            const socket = new WebSocket(
+                "ws://video-process-app.up.railway.app/"
+            );
+            socket.addEventListener("open", (event) => {
+                console.log(event);
 
-            socket.emit("upload", fileName, (serverStatus) => {
-                divOutput.textContent = serverStatus;
-                console.log(serverStatus);
+                socket.send(
+                    JSON.stringify({ type: "upload", fileName: "filename" })
+                );
             });
-            socket.on("status", (data) => {
-                if (data.status === "processed") {
-                    divOutput.textContent = `${data.resolution}p has been processed`;
-                } else {
-                    divOutput.textContent = data.status;
-                }
-
-                console.log(serverStatus);
+            socket.addEventListener("message", (event) => {
+                divOutput.textContent = msg.status;
             });
         } else {
             divOutput.textContent = "Wrong file format";

@@ -1,10 +1,38 @@
-const btnUpload = document.getElementById("btn-upload");
-// const btnTest = document.getElementById("btn-test");
-const fileSelected = document.getElementById("file-selected");
-const divOutput = document.getElementById("output");
-const f = document.getElementById("file");
+const btnUpload = document.querySelector(".btn-upload");
+const fileContainer = document.querySelector(".file-container");
+const fileSelected = document.querySelector(".file-selected");
+const file = document.querySelector(".file");
+const fileLabel = document.querySelector(".file-label");
+// message elements
+const statusContainer = document.querySelector(".status-container");
+const statusMain = document.querySelector(".status-main");
+const statusError = document.querySelector(".status-error");
+// transcoding elements
+const statusInit = document.querySelector(".status-init");
+const statusVideo = document.querySelector(".status-video");
+const status360 = document.querySelector(".status-360");
+const status480 = document.querySelector(".status-480");
+const status720 = document.querySelector(".status-720");
+const statusDone = document.querySelector(".status-done");
 
-f.addEventListener("change", (e) => {
+// transcoding lines
+const firstLine = document.querySelector(
+    "#status-container > .status:first-child"
+);
+const secondLine = document.querySelector(
+    "#status-container > .status:nth-child(2)"
+);
+const transcodeLine1 = document.querySelector(
+    ".status-video-details li > span.status-360"
+);
+const transcodeLine2 = document.querySelector(
+    ".status-video-details li > span.status-480"
+);
+const transcodeLine3 = document.querySelector(
+    ".status-video-details li > span.status-720"
+);
+
+file.addEventListener("change", (e) => {
     if (e.target.value) {
         fileSelected.innerText = e.target.value;
     } else {
@@ -12,22 +40,11 @@ f.addEventListener("change", (e) => {
     }
 });
 
-// const socket = new WebSocket("ws://localhost:5000/");
-// socket.addEventListener("open", (event) => {
-//     socket.send(JSON.stringify({ type: "upload", fileName: "filename" }));
-// });
-
-// socket.addEventListener("message", (event) => {
-//     console.log("msg=", JSON.parse(event.data));
-// });
-
-// btnTest.addEventListener("click", () => {
-//     fetch("/test");
-// });
-
 btnUpload.addEventListener("click", () => {
+    btnUpload.disabled = true;
+    file.disabled = true;
     const fileReader = new FileReader();
-    const theFile = f.files[0];
+    const theFile = file.files[0];
     const fileSize = theFile.size;
     fileReader.onload = async (ev) => {
         //check if file is bigger than 2GB
@@ -82,8 +99,8 @@ btnUpload.addEventListener("click", () => {
                 );
                 chunksArray.push(chunk);
             }
-            divOutput.textContent = "0%";
-            btnUpload.setAttribute("disabled", "");
+            statusMain.textContent = "0%";
+            btnUpload.style.display = "none";
 
             //send requests in BATCH_SIZE batches for optimization
             chunksArray.forEach((item, idx) => {
@@ -102,8 +119,7 @@ btnUpload.addEventListener("click", () => {
                 };
             });
             //show progress of uploading
-            divOutput.textContent = "Loading...";
-            btnUpload.removeAttribute("disabled");
+            statusMain.textContent = "Loading...";
 
             //finish uploading
             const completeResult = await fetch("/complete-upload", {
@@ -118,23 +134,98 @@ btnUpload.addEventListener("click", () => {
                 }),
             });
             await completeResult.json();
-            divOutput.textContent = "Complete!";
+            //----------------------------------------------
+            btnUpload.style.display = "none";
+            fileContainer.style.display = "none";
+            statusContainer.classList.add("active");
+            statusInit.classList.add("progress");
+            statusMain.textContent = "Started transcoding process";
             //create websocket connection
             const socket = new WebSocket(
                 "wss://video-process-app.up.railway.app/"
             );
-            socket.addEventListener("open", (event) => {
+            socket.addEventListener("open", () => {
                 socket.send(
                     JSON.stringify({ type: "upload", fileName: fileName })
                 );
             });
             socket.addEventListener("message", (event) => {
-                const message = JSON.parse(event.data).msg;
-                console.log(message);
-                divOutput.textContent = message;
+                const { status, msg } = JSON.parse(event.data);
+                switch (status) {
+                    case "checked":
+                        statusInit.classList.remove("progress");
+                        statusInit.classList.add("active");
+                        statusVideo.classList.add("progress");
+                        firstLine.style.setProperty(
+                            "--line-color-1",
+                            "var(--status-active)"
+                        );
+                        status360.classList.add("progress");
+                        status480.classList.add("progress");
+                        status720.classList.add("progress");
+                        transcodeLine1.style.setProperty(
+                            "--line-color-1",
+                            "var(--status-active)"
+                        );
+                        transcodeLine2.style.setProperty(
+                            "--line-color-2",
+                            "var(--status-active)"
+                        );
+                        transcodeLine3.style.setProperty(
+                            "--line-color-3",
+                            "var(--status-active)"
+                        );
+                        statusMain.textContent = msg;
+                        break;
+                    case "processed":
+                        if (msg === "360p") {
+                            status360.classList.remove("progress");
+                            status360.classList.add("active");
+                            statusMain.textContent = msg + " processed";
+                        }
+                        if (msg === "480p") {
+                            status480.classList.remove("progress");
+                            status480.classList.add("active");
+                            statusMain.textContent = msg + " processed";
+                        }
+                        if (msg === "720p") {
+                            status720.classList.remove("progress");
+                            status720.classList.add("active");
+                            statusMain.textContent = msg + " processed";
+                        }
+                        if (
+                            status360.classList.contains("active") &&
+                            status480.classList.contains("active") &&
+                            status720.classList.contains("active")
+                        ) {
+                            statusVideo.classList.remove("progress");
+                            statusVideo.classList.add("active");
+                            secondLine.style.setProperty(
+                                "--line-color-2",
+                                "var(--status-active)"
+                            );
+                            statusDone.classList.add("progress");
+                        }
+                        break;
+                    case "done":
+                        statusDone.classList.remove("progress");
+                        statusDone.classList.add("active");
+                        //reset all classes
+                        const activeElements =
+                            document.querySelectorAll(".active");
+                        activeElements.forEach((elem) =>
+                            elem.classList.remove("active")
+                        );
+                        statusMain.textContent = "Video iframe URL";
+                        break;
+                    default:
+                        statusMain.textContent = msg;
+                        break;
+                }
+                console.log(msg);
             });
         } else {
-            divOutput.textContent = "Wrong file format";
+            statusMain.textContent = "Wrong file format";
         }
     };
     fileReader.readAsArrayBuffer(theFile);

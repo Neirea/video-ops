@@ -67,7 +67,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         Buffer.from(req.body.message.data, "base64").toString().trim()
     );
     const fileName = data.name;
-    console.log(`File name: ${fileName}`);
     //get file out of storage
     const tmpInputFile = `input-${fileName}`;
     await bucket_raw.file(fileName).download({ destination: tmpInputFile });
@@ -80,12 +79,10 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             isError = true;
             return;
         }
-        wschat[fileName].send(
-            JSON.stringify({
-                status: "checked",
-                msg: `Video file is correct with duration ${info.streams[0].duration}`,
-            })
-        );
+        sendTo(fileName, {
+            status: "checked",
+            msg: `Video file is correct with duration ${info.streams[0].duration}`,
+        });
     });
 
     if (isError) return;
@@ -109,7 +106,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             (res) => {
                 sendTo(fileName, {
                     status: "processed",
-                    msg: `${height360} has been processed`,
+                    msg: `${height360}p`,
                 });
                 return res;
             }
@@ -120,7 +117,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             (res) => {
                 sendTo(fileName, {
                     status: "processed",
-                    msg: `${height480} has been processed`,
+                    msg: `${height480}p`,
                 });
                 return res;
             }
@@ -131,7 +128,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             (res) => {
                 sendTo(fileName, {
                     status: "processed",
-                    msg: `${height720} has been processed`,
+                    msg: `${height720}p`,
                 });
                 return res;
             }
@@ -161,7 +158,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         });
         sendTo(fileName, {
             status: "done",
-            msg: "Uploading is finished",
+            msg: "Transcoding is finished",
         });
     } catch (err) {
         sendTo(fileName, {

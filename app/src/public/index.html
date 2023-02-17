@@ -10,19 +10,52 @@
     </head>
     <body>
         <h1>Video Uploader</h1>
-        <div class="file-container">
-            <label class="file-label" for="file">Choose File</label>
-            <div id="file-selected">&nbsp;</div>
-            <input
-                type="file"
-                id="file"
-                accept="video/mp4,video/x-m4v,video/*"
-            />
-        </div>
-
-        <button id="btn-upload">Read & Upload</button>
-        <div id="output"></div>
+        <main>
+            <div id="left">
+                <div class="file-container">
+                    <input
+                        type="file"
+                        id="file"
+                        class="file"
+                        accept="video/mp4,video/x-m4v,video/*"
+                    />
+                    <label class="file-label" for="file">Choose File</label>
+                    <div class="file-selected">&nbsp;</div>
+                </div>
+                <button class="btn-upload">Read & Upload</button>
+                <ul class="status-container">
+                    <li class="status">
+                        <div>Initialize</div>
+                        <span class="status-init">?</span>
+                    </li>
+                    <li class="status">
+                        Transcoding
+                        <span class="status-video">?</span>
+                        <ul class="status-video-details">
+                            <li>
+                                <span class="status-360">?</span>
+                                <div>360p</div>
+                            </li>
+                            <li>
+                                <span class="status-480">?</span>
+                                <div>480p</div>
+                            </li>
+                            <li>
+                                <span class="status-720">?</span>
+                                <div>720p</div>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="status">
+                        <div>Done</div>
+                        <span class="status-done">?</span>
+                    </li>
+                </ul>
+                <div class="status-main">&nbsp;</div>
+            </div>
+            <aside id="right">
+                <div class="video-player"></div>
+            </aside>
+        </main>
     </body>
 </html>
-
-<!-- <input type="file" /> -->

@@ -34,8 +34,6 @@ const app = express();
     app.use(express.json());
     app.use("/", express.static(path.join(__dirname, "public")));
 
-    const port = process.env.PORT || 5000;
-
     app.post("/create-upload", async (req, res) => {
         const name = req.body.name;
         const command = new CreateMultipartUploadCommand({
@@ -92,6 +90,8 @@ const app = express();
         await bucketClient.send(command);
         res.json({ success: true });
     });
+
+    const port = process.env.PORT || 5000;
 
     app.listen(port, () => {
         console.log(`Server is running on port ${port}...`);

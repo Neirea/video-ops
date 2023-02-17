@@ -1,4 +1,5 @@
 const btnUpload = document.getElementById("btn-upload");
+// const btnTest = document.getElementById("btn-test");
 const fileSelected = document.getElementById("file-selected");
 const divOutput = document.getElementById("output");
 const f = document.getElementById("file");
@@ -10,6 +11,19 @@ f.addEventListener("change", (e) => {
         fileSelected.innerHTML = "&nbsp;";
     }
 });
+
+// const socket = new WebSocket("ws://localhost:5000/");
+// socket.addEventListener("open", (event) => {
+//     socket.send(JSON.stringify({ type: "upload", fileName: "filename" }));
+// });
+
+// socket.addEventListener("message", (event) => {
+//     console.log("msg=", JSON.parse(event.data));
+// });
+
+// btnTest.addEventListener("click", () => {
+//     fetch("/test");
+// });
 
 btnUpload.addEventListener("click", () => {
     const fileReader = new FileReader();
@@ -110,14 +124,12 @@ btnUpload.addEventListener("click", () => {
                 "wss://video-process-app.up.railway.app/"
             );
             socket.addEventListener("open", (event) => {
-                console.log(event);
-
                 socket.send(
-                    JSON.stringify({ type: "upload", fileName: "filename" })
+                    JSON.stringify({ type: "upload", fileName: fileName })
                 );
             });
             socket.addEventListener("message", (event) => {
-                divOutput.textContent = msg.status;
+                divOutput.textContent = event.data.msg;
             });
         } else {
             divOutput.textContent = "Wrong file format";

@@ -15,20 +15,23 @@ import Video from "./model";
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
-let wsrooms: { [key: string]: WebSocket } = {};
+let wschat: { [key: string]: WebSocket } = {};
 
 wss.on("connection", (socket) => {
     socket.on("message", (rawData) => {
         const data = JSON.parse(rawData.toString());
         //join room based on fileName
-        if (data.type === "upload" && !wsrooms[data.fileName]) {
-            wsrooms[data.fileName] = socket;
+        if (data.type === "upload" && !wschat[data.fileName]) {
+            console.log(`Joined chat with id: ${data.fileName}`);
+            wschat[data.fileName] = socket;
         }
     });
 });
 
 function sendTo(socketId: string, message: string | Object) {
-    wsrooms[socketId].send(JSON.stringify(message));
+    if (wschat[socketId]) {
+        wschat[socketId].send(JSON.stringify(message));
+    }
 }
 
 const storage = new Storage({
@@ -77,7 +80,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             isError = true;
             return;
         }
-        wsrooms["filename"].send(
+        wschat[fileName].send(
             JSON.stringify({
                 status: "checked",
                 msg: `Video file is correct with duration ${info.streams[0].duration}`,

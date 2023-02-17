@@ -17,10 +17,10 @@ const statusDone = document.querySelector(".status-done");
 
 // transcoding lines
 const firstLine = document.querySelector(
-    "#status-container > .status:first-child"
+    ".status-container > .status:first-child"
 );
 const secondLine = document.querySelector(
-    "#status-container > .status:nth-child(2)"
+    ".status-container > .status:nth-child(2)"
 );
 const transcodeLine1 = document.querySelector(
     ".status-video-details li > span.status-360"
@@ -100,7 +100,6 @@ btnUpload.addEventListener("click", () => {
                 chunksArray.push(chunk);
             }
             statusMain.textContent = "0%";
-            btnUpload.style.display = "none";
 
             //send requests in BATCH_SIZE batches for optimization
             chunksArray.forEach((item, idx) => {
@@ -151,6 +150,7 @@ btnUpload.addEventListener("click", () => {
             });
             socket.addEventListener("message", (event) => {
                 const { status, msg } = JSON.parse(event.data);
+                console.log(msg);
                 switch (status) {
                     case "checked":
                         statusInit.classList.remove("progress");
@@ -222,7 +222,6 @@ btnUpload.addEventListener("click", () => {
                         statusMain.textContent = msg;
                         break;
                 }
-                console.log(msg);
             });
         } else {
             statusMain.textContent = "Wrong file format";

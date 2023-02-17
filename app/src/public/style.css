@@ -62,8 +62,6 @@ li {
     gap: 1rem;
     width: 35rem;
     aspect-ratio: 16/9;
-    /* adjust for video player */
-    margin-top: -4px;
     background-color: #26282c;
 }
 #right {
@@ -178,9 +176,9 @@ button:disabled {
 .status-container > .status:not(:last-child)::after {
     content: "";
     width: 4rem;
-    height: 2px;
+    height: 0.125rem;
     position: absolute;
-    top: calc(3.5rem - 2px);
+    top: 3.375rem;
     left: 2.5rem;
 }
 
@@ -189,7 +187,7 @@ button:disabled {
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 2px solid var(--status-inactive);
+    border: 0.125rem solid var(--status-inactive);
     border-radius: 50%;
     height: 2rem;
     width: 2rem;
@@ -199,13 +197,13 @@ button:disabled {
 
 .status-container > li > span.progress,
 .status-video-details > li > span.progress {
-    border: 2px solid var(--status-active);
+    border: 0.125rem solid var(--status-active);
     background-color: transparent;
 }
 
 .status-container li > span.active,
 .status-video-details > li > span.active {
-    border: 2px solid var(--status-active);
+    border: 0.125rem solid var(--status-active);
     background-color: var(--status-active);
     color: var(--left-color);
 }
@@ -214,37 +212,38 @@ button:disabled {
     position: relative;
     display: flex;
     gap: 1rem;
-    /* top: 6rem; */
 }
 
 .status-video-details li > span.status-360::after {
     content: "";
-    width: 2.8rem;
-    height: 2px;
+    width: 2.5rem;
+    height: 0.125rem;
     background-color: var(--line-color-1);
     position: absolute;
     transform: rotate(-45deg);
-    top: -0.8rem;
+    top: -0.7rem;
     left: 1.3rem;
+    right: 0;
+    bottom: 0;
 }
 
 .status-video-details li > span.status-480::after {
     content: "";
-    width: 1.6rem;
-    height: 2px;
+    width: 1.15rem;
+    height: 0.125rem;
     background-color: var(--line-color-2);
     position: absolute;
     transform: rotate(-90deg);
-    top: -0.8rem;
+    top: -0.55rem;
 }
 
 .status-video-details li > span.status-720::after {
     content: "";
-    width: 2.8rem;
-    height: 2px;
+    width: 2.5rem;
+    height: 0.125rem;
     background-color: var(--line-color-3);
     position: absolute;
     transform: rotate(45deg);
-    top: -0.8rem;
+    top: -0.7rem;
     right: 1.3rem;
 }

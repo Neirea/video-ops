@@ -9,8 +9,8 @@ import ffmpeg from "fluent-ffmpeg";
 import fs from "fs/promises";
 import http from "http";
 import mongoose from "mongoose";
-import Video from "./model";
 import { WebSocket, WebSocketServer } from "ws";
+import Video from "./model";
 
 const app = express();
 const server = http.createServer(app);

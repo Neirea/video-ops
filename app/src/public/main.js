@@ -107,7 +107,7 @@ btnUpload.addEventListener("click", () => {
             divOutput.textContent = "Complete!";
             //create websocket connection
             const socket = new WebSocket(
-                "ws://video-process-app.up.railway.app/"
+                "wss://video-process-app.up.railway.app/"
             );
             socket.addEventListener("open", (event) => {
                 console.log(event);

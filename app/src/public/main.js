@@ -129,7 +129,9 @@ btnUpload.addEventListener("click", () => {
                 );
             });
             socket.addEventListener("message", (event) => {
-                divOutput.textContent = event.data.msg;
+                const message = JSON.parse(event.data).msg;
+                console.log(message);
+                divOutput.textContent = message;
             });
         } else {
             divOutput.textContent = "Wrong file format";

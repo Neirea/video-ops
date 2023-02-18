@@ -41,8 +41,6 @@ file.addEventListener("change", (e) => {
 });
 
 btnUpload.addEventListener("click", () => {
-    btnUpload.disabled = true;
-    file.disabled = true;
     const fileReader = new FileReader();
     const theFile = file.files[0];
     const fileSize = theFile.size;
@@ -58,14 +56,14 @@ btnUpload.addEventListener("click", () => {
         }
         const chunkCount = Math.ceil(ev.target.result.byteLength / CHUNK_SIZE);
 
-        const fileTypes = ["mp4", "mkv", "avi", "mov"];
         const extension = theFile.name.split(".").pop().toLowerCase();
         //can't do more than 10000 chunks for s3
-        const isSuccess =
-            fileTypes.indexOf(extension) > -1 && chunkCount <= 10000;
+        const isSuccess = chunkCount <= 10000;
         const fileName = crypto.randomUUID() + `.${extension}`;
 
         if (isSuccess) {
+            btnUpload.disabled = true;
+            file.disabled = true;
             //initialize upload
             const uploadResult = await fetch("/create-upload", {
                 method: "POST",
@@ -101,38 +99,51 @@ btnUpload.addEventListener("click", () => {
             }
             statusMain.textContent = "0%";
 
-            //send requests in BATCH_SIZE batches for optimization
+            const reqProgress = { total: fileSize };
             chunksArray.forEach((item, idx) => {
+                reqProgress[idx] = { loaded: 0 };
                 batchRequests.push(
-                    fetch(parts[idx].signedUrl, {
-                        method: "PUT",
-                        body: item,
-                    })
+                    trackedRequest(
+                        parts[idx].signedUrl,
+                        "PUT",
+                        item,
+                        idx,
+                        reqProgress,
+                        statusMain
+                    )
                 );
             });
-            const batchResult = await Promise.all(batchRequests);
-            const results = batchResult.map((item, idx) => {
-                return {
-                    ETag: item.headers.get("ETag"),
-                    PartNumber: idx + 1,
-                };
-            });
-            //show progress of uploading
-            statusMain.textContent = "Loading...";
+            try {
+                const batchResult = await Promise.all(batchRequests);
+                const results = batchResult.map(({ ETag, PartNumber }) => {
+                    return {
+                        ETag,
+                        PartNumber,
+                    };
+                });
+                //finish uploading
+                statusMain.textContent = "Finalizing upload...";
+                const completeResult = await fetch("/complete-upload", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        Key,
+                        UploadId,
+                        parts: results,
+                    }),
+                });
+                await completeResult.json();
+            } catch (error) {
+                statusMain.textContent = error.message;
+                btnUpload.disabled = false;
+                file.disabled = false;
+                statusMain.textContent = " ";
+                reqProgress = {};
+                return;
+            }
 
-            //finish uploading
-            const completeResult = await fetch("/complete-upload", {
-                method: "POST",
-                headers: {
-                    "content-type": "application/json",
-                },
-                body: JSON.stringify({
-                    Key,
-                    UploadId,
-                    parts: results,
-                }),
-            });
-            await completeResult.json();
             //----------------------------------------------
             btnUpload.style.display = "none";
             fileContainer.style.display = "none";
@@ -150,7 +161,6 @@ btnUpload.addEventListener("click", () => {
             });
             socket.addEventListener("message", (event) => {
                 const { status, msg } = JSON.parse(event.data);
-                console.log(msg);
                 switch (status) {
                     case "checked":
                         statusInit.classList.remove("progress");
@@ -229,3 +239,38 @@ btnUpload.addEventListener("click", () => {
     };
     fileReader.readAsArrayBuffer(theFile);
 });
+
+function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (e) => {
+            reqProgress[idx].loaded = e.loaded;
+            const currentProgress = Object.keys(reqProgress).reduce(
+                (prev, curr) => {
+                    if (!isNaN(curr)) {
+                        return prev + reqProgress[curr].loaded;
+                    }
+                    return prev;
+                },
+                0
+            );
+            htmlElem.textContent = `${Math.floor(
+                (currentProgress / reqProgress.total) * 100
+            )}%`;
+        });
+        xhr.open(method, url);
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                const ETag = xhr.getResponseHeader("ETag");
+                resolve({ ETag, PartNumber: idx + 1 });
+            }
+        };
+        xhr.onerror = function (error) {
+            reject(error);
+        };
+        xhr.onabort = function () {
+            reject(new Error("Upload cancelled by user"));
+        };
+        xhr.send(body);
+    });
+}

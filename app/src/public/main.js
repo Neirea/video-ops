@@ -48,7 +48,7 @@ btnUpload.addEventListener("click", () => {
         //check if file is bigger than 2GB
         if (ev.target.result.byteLength > 2147483648) return;
         let CHUNK_SIZE = 10485760; //10Mb - min size for chunk
-        const BATCH_SIZE = 15;
+        const BATCH_SIZE = 6;
 
         //if file is larger than 150Mb split into 15 chunks for parallel requests
         if (fileSize > BATCH_SIZE * CHUNK_SIZE) {

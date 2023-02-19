@@ -34,19 +34,18 @@ app.use(
     })
 );
 
-// Apply the rate limiting middleware to all requests
-app.use(
-    rateLimit({
-        windowMs: 60 * 60 * 1000, // 1hour
-        max: 9, // Limit each IP to 9 requests per `window` (here, per hour)
-        message:
-            "Too many attemps made from this IP, please try again after an hour",
-        standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-        legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    })
-);
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "public")));
+
+// Rate limiting middleware
+const limiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1hour
+    max: 3, // Limit each IP to 3 requests per `window` (here, per hour)
+    message:
+        "Too many attemps made from this IP, please try again after an hour",
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 class CustomError extends Error {
     statusCode: number;
@@ -56,7 +55,7 @@ class CustomError extends Error {
     }
 }
 
-app.post("/create-upload", async (req, res) => {
+app.post("/create-upload", limiter, async (req, res) => {
     const token = req.headers["token"];
     if (token !== process.env.TOKEN) {
         throw new CustomError("Access Denied", 403);
@@ -72,7 +71,7 @@ app.post("/create-upload", async (req, res) => {
     res.json({ UploadId, Key });
 });
 
-app.post("/get-upload-urls", async (req, res) => {
+app.post("/get-upload-urls", limiter, async (req, res) => {
     const token = req.headers["token"];
     if (token !== process.env.TOKEN) {
         throw new CustomError("Access Denied", 403);
@@ -103,7 +102,7 @@ app.post("/get-upload-urls", async (req, res) => {
     });
 });
 
-app.post("/complete-upload", async (req, res) => {
+app.post("/complete-upload", limiter, async (req, res) => {
     const token = req.headers["token"];
     if (token !== process.env.TOKEN) {
         throw new CustomError("Access Denied", 403);

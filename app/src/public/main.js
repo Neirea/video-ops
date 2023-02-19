@@ -3,6 +3,7 @@ const fileContainer = document.querySelector(".file-container");
 const fileSelected = document.querySelector(".file-selected");
 const file = document.querySelector(".file");
 const fileLabel = document.querySelector(".file-label");
+const token = document.querySelector(".token");
 // message elements
 const statusContainer = document.querySelector(".status-container");
 const statusMain = document.querySelector(".status-main");
@@ -14,6 +15,10 @@ const status360 = document.querySelector(".status-360");
 const status480 = document.querySelector(".status-480");
 const status720 = document.querySelector(".status-720");
 const statusDone = document.querySelector(".status-done");
+
+// url of video
+let params = new URL(document.location).searchParams;
+let video = params.get("video");
 
 // transcoding lines
 const firstLine = document.querySelector(
@@ -65,55 +70,58 @@ btnUpload.addEventListener("click", () => {
             btnUpload.disabled = true;
             file.disabled = true;
             //initialize upload
-            const uploadResult = await fetch("/create-upload", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({
-                    name: fileName,
-                }),
-            });
-            const { UploadId, Key } = await uploadResult.json();
 
-            //get urls for client to upload file chunks
-            const uploadUrlsResult = await fetch("/get-upload-urls", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({
-                    UploadId,
-                    Key,
-                    parts: chunkCount,
-                }),
-            });
-            const { parts } = await uploadUrlsResult.json();
-
-            //result of s3 responses
-            const chunksArray = [];
-            const batchRequests = [];
-
-            for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
-                const chunk = ev.target.result.slice(
-                    chunkId * CHUNK_SIZE,
-                    chunkId * CHUNK_SIZE + CHUNK_SIZE
-                );
-                chunksArray.push(chunk);
-            }
-            statusMain.textContent = "0%";
-
-            const reqProgress = { total: fileSize };
-            chunksArray.forEach((item, idx) => {
-                reqProgress[idx] = { loaded: 0 };
-                batchRequests.push(
-                    trackedRequest(
-                        parts[idx].signedUrl,
-                        "PUT",
-                        item,
-                        idx,
-                        reqProgress,
-                        statusMain
-                    )
-                );
-            });
             try {
+                const uploadResult = await fetch("/create-upload", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                        name: fileName,
+                    }),
+                });
+                if (!uploadResult.ok) throw await uploadResult.json();
+                const { UploadId, Key } = await uploadResult.json();
+
+                //get urls for client to upload file chunks
+                const uploadUrlsResult = await fetch("/get-upload-urls", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                        UploadId,
+                        Key,
+                        parts: chunkCount,
+                    }),
+                });
+                if (!uploadUrlsResult.ok) throw await uploadUrlsResult.json();
+                const { parts } = await uploadUrlsResult.json();
+
+                //result of s3 responses
+                const chunksArray = [];
+                const batchRequests = [];
+
+                for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
+                    const chunk = ev.target.result.slice(
+                        chunkId * CHUNK_SIZE,
+                        chunkId * CHUNK_SIZE + CHUNK_SIZE
+                    );
+                    chunksArray.push(chunk);
+                }
+                statusMain.textContent = "0%";
+
+                const reqProgress = { total: fileSize };
+                chunksArray.forEach((item, idx) => {
+                    reqProgress[idx] = { loaded: 0 };
+                    batchRequests.push(
+                        trackedRequest(
+                            parts[idx].signedUrl,
+                            "PUT",
+                            item,
+                            idx,
+                            reqProgress,
+                            statusMain
+                        )
+                    );
+                });
                 const batchResult = await Promise.all(batchRequests);
                 const results = batchResult.map(({ ETag, PartNumber }) => {
                     return {
@@ -134,17 +142,17 @@ btnUpload.addEventListener("click", () => {
                         parts: results,
                     }),
                 });
+                if (!completeResult.ok) throw await completeResult.json();
                 await completeResult.json();
             } catch (error) {
-                statusMain.textContent = error.message;
-                btnUpload.disabled = false;
-                file.disabled = false;
-                statusMain.textContent = " ";
+                console.log(error);
+                resetUI(error);
                 reqProgress = {};
                 return;
             }
 
             //----------------------------------------------
+            token.style.display = "none";
             btnUpload.style.display = "none";
             fileContainer.style.display = "none";
             statusContainer.classList.add("active");
@@ -226,6 +234,7 @@ btnUpload.addEventListener("click", () => {
                         activeElements.forEach((elem) =>
                             elem.classList.remove("active")
                         );
+                        /* ENTER URL HERE any */
                         statusMain.textContent = "Video iframe URL";
                         break;
                     default:
@@ -273,4 +282,13 @@ function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
         };
         xhr.send(body);
     });
+}
+
+function resetUI(error) {
+    statusMain.textContent = error.message;
+    btnUpload.disabled = false;
+    file.disabled = false;
+    //reset all active classes
+    const activeElements = document.querySelectorAll(".active");
+    activeElements.forEach((elem) => elem.classList.remove("active"));
 }

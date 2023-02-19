@@ -8,6 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import "dotenv/config";
 import express from "express";
 import "express-async-errors";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { orderBy } from "lodash";
 import path from "path";
@@ -32,10 +33,34 @@ app.use(
         contentSecurityPolicy: false,
     })
 );
+
+// Apply the rate limiting middleware to all requests
+app.use(
+    rateLimit({
+        windowMs: 60 * 60 * 1000, // 1hour
+        max: 9, // Limit each IP to 9 requests per `window` (here, per hour)
+        message:
+            "Too many attemps made from this IP, please try again after an hour",
+        standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+        legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    })
+);
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "public")));
 
+class CustomError extends Error {
+    statusCode: number;
+    constructor(message: string, statusCode: number) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+}
+
 app.post("/create-upload", async (req, res) => {
+    const token = req.headers["token"];
+    if (token !== process.env.TOKEN) {
+        throw new CustomError("Access Denied", 403);
+    }
     const name = req.body.name;
     const command = new CreateMultipartUploadCommand({
         Bucket: BUCKET_NAME,
@@ -48,6 +73,10 @@ app.post("/create-upload", async (req, res) => {
 });
 
 app.post("/get-upload-urls", async (req, res) => {
+    const token = req.headers["token"];
+    if (token !== process.env.TOKEN) {
+        throw new CustomError("Access Denied", 403);
+    }
     const { Key, UploadId, parts } = req.body;
     const promises = [];
 
@@ -75,6 +104,10 @@ app.post("/get-upload-urls", async (req, res) => {
 });
 
 app.post("/complete-upload", async (req, res) => {
+    const token = req.headers["token"];
+    if (token !== process.env.TOKEN) {
+        throw new CustomError("Access Denied", 403);
+    }
     const { Key, UploadId, parts } = req.body;
 
     // ordering the parts to make sure they are in the right order

@@ -1,7 +1,8 @@
 :root {
     box-sizing: border-box;
     --status-inactive: rgb(25, 25, 25);
-    --status-active: #8057d7;
+    --status-active: white;
+    --status-main: pink;
     --circle-inactive: #373737;
     --status-circle-inactive: #5a5a5a;
     --left-color: #26282c;
@@ -68,11 +69,24 @@ li {
     width: 35rem;
     aspect-ratio: 16/9;
 }
+
 /* scale on low resolutions */
 @media (max-width: 560px) {
     * {
         font-size: 2.85vw;
     }
+}
+/* TOKEN */
+.token {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+#token-input {
+    height: 1.5rem;
+    width: 15rem;
+    font-size: 1.25rem;
 }
 
 .video-player {
@@ -138,6 +152,7 @@ button:disabled {
 }
 /* STATUS CLASSES */
 .status-main {
+    color: var(--status-main);
     font-size: 1.25rem;
 }
 .status-container {

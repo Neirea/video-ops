@@ -10,6 +10,8 @@ import fs from "fs/promises";
 import http from "http";
 import mongoose from "mongoose";
 import { WebSocket, WebSocketServer } from "ws";
+import errorHandlerMiddleware from "./middleware/error-handle";
+import notFound from "./middleware/not-found";
 import Video from "./model";
 
 const app = express();
@@ -138,9 +140,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     try {
         await Promise.all(commandsBatch);
 
-        //delete junk
-        await fs.unlink(tmpInputFile);
-        await bucket_raw.file(fileName).delete();
         //save it to DB
         const low = `${fileName.split(".")[0]}_360.mp4`;
         const normal = `${fileName.split(".")[0]}_480.mp4`;
@@ -165,6 +164,10 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             status: "error",
             msg: (err as Error).message,
         });
+    } finally {
+        //delete junk
+        await fs.unlink(tmpInputFile);
+        await bucket_raw.file(fileName).delete();
     }
 
     function ffmpegCommand(
@@ -199,6 +202,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         });
     }
 });
+
+app.use(notFound);
+app.use(errorHandlerMiddleware);
 
 // Start the server
 const PORT = process.env.PORT || 8080;

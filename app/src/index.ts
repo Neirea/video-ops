@@ -10,7 +10,6 @@ import express from "express";
 import "express-async-errors";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { orderBy } from "lodash";
 import path from "path";
 import errorHandlerMiddleware from "./middleware/error-handle";
 import notFound from "./middleware/not-found";
@@ -53,8 +52,7 @@ app.use("/videos/:id", (req, res) => {
 const limiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1hour
     max: 3, // Limit each IP to 3 requests per `window` (here, per hour)
-    message:
-        "Too many attemps made from this IP, please try again after an hour",
+    message: { message: "Too many requests. Try again later" },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
@@ -83,7 +81,7 @@ app.post("/create-upload", limiter, async (req, res) => {
     res.json({ UploadId, Key });
 });
 
-app.post("/get-upload-urls", limiter, async (req, res) => {
+app.post("/get-upload-urls", async (req, res) => {
     const token = req.headers["token"];
     if (token !== process.env.TOKEN) {
         throw new CustomError("Access Denied", 403);
@@ -121,15 +119,12 @@ app.post("/complete-upload", limiter, async (req, res) => {
     }
     const { Key, UploadId, parts } = req.body;
 
-    // ordering the parts to make sure they are in the right order
-    const Parts = orderBy(parts, ["PartNumber"], ["asc"]);
-
     const command = new CompleteMultipartUploadCommand({
         Bucket: BUCKET_NAME,
         Key,
         UploadId,
         MultipartUpload: {
-            Parts,
+            Parts: parts,
         },
     });
     await bucketClient.send(command);

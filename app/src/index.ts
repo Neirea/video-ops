@@ -28,14 +28,26 @@ const bucketClient = new S3Client({
 
 const app = express();
 
+app.set("engine", "view");
+
 app.use(
     helmet({
-        contentSecurityPolicy: false,
+        contentSecurityPolicy: {
+            directives: {
+                "connect-src": [
+                    process.env.SERVER_URL || "http://localhost:5000",
+                    `https://${process.env.GCP_BUCKET_NAME}.storage.googleapis.com`,
+                ],
+            },
+        },
     })
 );
-
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "public")));
+
+app.use("/videos/:id", (req, res) => {
+    res.send();
+});
 
 // Rate limiting middleware
 const limiter = rateLimit({

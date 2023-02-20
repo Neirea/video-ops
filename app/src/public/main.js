@@ -4,6 +4,7 @@ const fileSelected = document.querySelector(".file-selected");
 const file = document.querySelector(".file");
 const fileLabel = document.querySelector(".file-label");
 const token = document.querySelector(".token");
+const tokenInput = document.getElementById("token-input");
 // message elements
 const statusContainer = document.querySelector(".status-container");
 const statusMain = document.querySelector(".status-main");
@@ -39,8 +40,10 @@ const transcodeLine3 = document.querySelector(
 
 file.addEventListener("change", (e) => {
     if (e.target.value) {
+        btnUpload.disabled = false;
         fileSelected.innerText = e.target.value;
     } else {
+        btnUpload.disabled = true;
         fileSelected.innerHTML = "&nbsp;";
     }
 });
@@ -48,18 +51,13 @@ file.addEventListener("change", (e) => {
 btnUpload.addEventListener("click", () => {
     const fileReader = new FileReader();
     const theFile = file.files[0];
-    const fileSize = theFile.size;
-    fileReader.onload = async (ev) => {
-        //check if file is bigger than 2GB
-        if (ev.target.result.byteLength > 2147483648) return;
-        let CHUNK_SIZE = 10485760; //10Mb - min size for chunk
-        const BATCH_SIZE = 6;
 
-        //if file is larger than 150Mb split into 15 chunks for parallel requests
-        if (fileSize > BATCH_SIZE * CHUNK_SIZE) {
-            CHUNK_SIZE = Math.floor(fileSize / (BATCH_SIZE - 1));
-        }
-        const chunkCount = Math.ceil(ev.target.result.byteLength / CHUNK_SIZE);
+    fileReader.onload = async (ev) => {
+        const fileSize = ev.target.result.byteLength;
+        //check if file is bigger than 2GB
+        if (fileSize > 2147483648) return;
+        let CHUNK_SIZE = 10485760; //10Mb - min size for chunk
+        const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
 
         const extension = theFile.name.split(".").pop().toLowerCase();
         //can't do more than 10000 chunks for s3
@@ -74,7 +72,10 @@ btnUpload.addEventListener("click", () => {
             try {
                 const uploadResult = await fetch("/create-upload", {
                     method: "POST",
-                    headers: { "content-type": "application/json" },
+                    headers: {
+                        "content-type": "application/json",
+                        token: tokenInput.value,
+                    },
                     body: JSON.stringify({
                         name: fileName,
                     }),
@@ -85,7 +86,10 @@ btnUpload.addEventListener("click", () => {
                 //get urls for client to upload file chunks
                 const uploadUrlsResult = await fetch("/get-upload-urls", {
                     method: "POST",
-                    headers: { "content-type": "application/json" },
+                    headers: {
+                        "content-type": "application/json",
+                        token: tokenInput.value,
+                    },
                     body: JSON.stringify({
                         UploadId,
                         Key,
@@ -135,6 +139,7 @@ btnUpload.addEventListener("click", () => {
                     method: "POST",
                     headers: {
                         "content-type": "application/json",
+                        token: tokenInput.value,
                     },
                     body: JSON.stringify({
                         Key,
@@ -150,6 +155,7 @@ btnUpload.addEventListener("click", () => {
                 reqProgress = {};
                 return;
             }
+            return;
 
             //----------------------------------------------
             token.style.display = "none";

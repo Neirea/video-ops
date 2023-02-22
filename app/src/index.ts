@@ -150,7 +150,12 @@ app.post("/complete-upload", limiter, async (req, res) => {
 
 app.get("/video", async (req, res) => {
     const queryVideo = req.query.v as string;
-    const videoName = (queryVideo || "test") + ".mp4";
+    const queryQuality = req.query.q as string;
+    const videoName = queryVideo
+        ? queryQuality
+            ? `${queryVideo}_${queryQuality}.mp4`
+            : `${queryVideo}_1080.mp4`
+        : "test.mp4";
     // Ensure there is a range given for the video
     const range = req.headers.range!;
     if (!range) {

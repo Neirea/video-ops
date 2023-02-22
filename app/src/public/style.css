@@ -89,6 +89,10 @@ footer h1,
 .video-list {
     text-align: center;
 }
+footer h1 {
+    font-size: 2rem;
+    color: var(--status-active);
+}
 .video-list li {
     cursor: pointer;
 }
@@ -105,10 +109,6 @@ footer h1,
     width: 15rem;
     font-size: 1.25rem;
 }
-
-/* .video-player {
-    background-color: none;
-} */
 
 /* FILE CLASSES */
 .file {
@@ -183,9 +183,6 @@ button:disabled {
 }
 
 .status-container > li {
-    --line-color-1: var(--status-inactive);
-    --line-color-2: var(--status-inactive);
-    --line-color-3: var(--status-inactive);
     display: flex;
     position: relative;
     flex-direction: column;
@@ -196,18 +193,38 @@ button:disabled {
 .status-video-details > li {
     --line-color-1: var(--status-inactive);
     --line-color-2: var(--status-inactive);
+    position: relative;
     margin: 0 auto;
+    font-size: 12px;
 }
-.status-container > li:first-child::after {
+.status-video-details > li > div {
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+}
+.status-init {
+    background-color: var(--line-color-1);
+    z-index: 1;
+}
+.status-video {
+    background-color: var(--line-color-2);
+    z-index: 1;
+}
+.status-1 {
+    --line-color-1: var(--status-inactive);
+}
+.status-2 {
+    --line-color-2: var(--status-inactive);
+}
+.status-1::after {
     background-color: var(--line-color-1);
 }
-.status-container > li:nth-child(2)::after {
+.status-2::after {
     background-color: var(--line-color-2);
 }
-.status-container > li:last-child::after {
-    background-color: var(--line-color-3);
-}
-.status-container > .status:not(:last-child)::after {
+.status-1::after,
+.status-2::after {
     content: "";
     width: 4rem;
     height: 0.125rem;
@@ -246,6 +263,7 @@ button:disabled {
     position: relative;
     display: flex;
     gap: 1rem;
+    margin-bottom: 2rem;
 }
 
 .status-video-details li > span.status-480::after {

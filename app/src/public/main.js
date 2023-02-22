@@ -13,16 +13,14 @@ const statusContainer = document.querySelector(".status-container");
 const statusMain = document.querySelector(".status-main");
 const statusError = document.querySelector(".status-error");
 // transcoding elements
-const statusInit = document.querySelector(".status-init"); //first line
-const statusVideo = document.querySelector(".status-video"); //second line
+const statusInit = document.querySelector(".status-init");
+const statusVideo = document.querySelector(".status-video");
+const statusDone = document.querySelector(".status-done");
+const status1 = document.querySelector(".status-1"); //first top line
+const status2 = document.querySelector(".status-2"); //second top line
 const status480 = document.querySelector(".status-480"); //480p line
 const status720 = document.querySelector(".status-720"); //720p line
 const status1080 = document.querySelector(".status-1080"); //1080p line
-const statusDone = document.querySelector(".status-done");
-
-// url of video
-let params = new URL(document.location).searchParams;
-let video = params.get("video");
 
 getVideoList();
 
@@ -211,7 +209,7 @@ btnUpload.addEventListener("click", () => {
                         ) {
                             statusVideo.classList.remove("progress");
                             statusVideo.classList.add("active");
-                            statusVideo.style.setProperty(
+                            status2.style.setProperty(
                                 "--line-color-2",
                                 "var(--status-active)"
                             );
@@ -223,6 +221,7 @@ btnUpload.addEventListener("click", () => {
                         statusDone.classList.add("active");
                         //RESET TO DEFAULT
                         resetUI();
+                        statusMain.textContent = "Finished uploading";
                         // ADD LINK TO THE LIST OF VIDEOS
                         createVideoListElement(msg);
                         break;
@@ -299,6 +298,10 @@ function resetUI(error) {
     status480.style.removeProperty("--line-color-1");
     status720.style.removeProperty("--line-color-2");
     status1080.style.removeProperty("--line-color-3");
+    //display reset
+    token.style.display = "flex";
+    btnUpload.style.display = "inline-block";
+    fileContainer.style.display = "flex";
     //reset buttons and inputs
     btnUpload.disabled = false;
     file.disabled = false;

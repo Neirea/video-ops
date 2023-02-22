@@ -9,7 +9,7 @@
         <script src="main.js" defer></script>
     </head>
     <body>
-        <h1>Video Uploader</h1>
+        <header>Video Uploader</header>
         <main>
             <div id="left">
                 <div class="token">
@@ -59,8 +59,18 @@
             </div>
 
             <aside id="right">
-                <div class="video-player"></div>
+                <video
+                    id="video-player"
+                    src="/video"
+                    type="video/mp4"
+                    controls
+                    muted="muted"
+                ></video>
             </aside>
         </main>
+        <footer>
+            <h1>Uploaded Videos</h1>
+            <ul class="video-list"></ul>
+        </footer>
     </body>
 </html>

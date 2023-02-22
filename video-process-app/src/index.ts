@@ -69,7 +69,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const data = JSON.parse(
         Buffer.from(req.body.message.data, "base64").toString().trim()
     );
-    const fileName = data.name;
+    const fileName: string = data.name;
+    const dbName = fileName.split(".")[0];
     //get file out of storage
     const tmpInputFile = `input-${fileName}`;
     await bucket_raw.file(fileName).download({ destination: tmpInputFile });
@@ -129,23 +130,12 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         await Promise.all(commandsBatch);
 
         //save it to DB
-        const low = `${fileName.split(".")[0]}_480.mp4`;
-        const normal = `${fileName.split(".")[0]}_720.mp4`;
-        const high = `${fileName.split(".")[0]}_1080.mp4`;
-
-        const url_low = bucket_prod.file(low).publicUrl();
-        const url_normal = bucket_prod.file(normal).publicUrl();
-        const url_high = bucket_prod.file(high).publicUrl();
-
         await Video.create({
-            name: fileName,
-            low: url_low,
-            normal: url_normal,
-            high: url_high,
+            name: dbName,
         });
         sendTo(fileName, {
             status: "done",
-            msg: "Transcoding is finished",
+            msg: dbName,
         });
     } catch (err) {
         sendTo(fileName, {
@@ -159,7 +149,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     }
 
     function ffmpegCommand(input: string, height: number) {
-        const outputFileName = `${fileName.split(".")[0]}_${height}.mp4`;
+        const outputFileName = `${dbName}_${height}.mp4`;
         const outputTmp = "tmp-" + outputFileName;
         const outputStream = bucket_prod
             .file(outputFileName)

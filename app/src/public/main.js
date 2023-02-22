@@ -1,10 +1,13 @@
+const left = document.getElementById("left");
+const tokenInput = document.getElementById("token-input");
+const videoPlayer = document.getElementById("video-player");
 const btnUpload = document.querySelector(".btn-upload");
 const fileContainer = document.querySelector(".file-container");
 const fileSelected = document.querySelector(".file-selected");
 const file = document.querySelector(".file");
 const fileLabel = document.querySelector(".file-label");
 const token = document.querySelector(".token");
-const tokenInput = document.getElementById("token-input");
+const videosList = document.querySelector(".video-list");
 // message elements
 const statusContainer = document.querySelector(".status-container");
 const statusMain = document.querySelector(".status-main");
@@ -38,13 +41,15 @@ const transcodeLine3 = document.querySelector(
     ".status-video-details li > span.status-720"
 );
 
+getVideoList();
+
 file.addEventListener("change", (e) => {
     if (e.target.value) {
         btnUpload.disabled = false;
-        fileSelected.innerText = e.target.value;
+        fileSelected.textContent = e.target.value;
     } else {
         btnUpload.disabled = true;
-        fileSelected.innerHTML = "&nbsp;";
+        fileSelected.textContent = String.fromCharCode(160);
     }
 });
 
@@ -101,7 +106,7 @@ btnUpload.addEventListener("click", () => {
 
                 //result of s3 responses
                 const chunksArray = [];
-                const batchRequests = [];
+                const partRequests = [];
 
                 for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
                     const chunk = ev.target.result.slice(
@@ -115,7 +120,7 @@ btnUpload.addEventListener("click", () => {
                 const reqProgress = { total: fileSize };
                 chunksArray.forEach((item, idx) => {
                     reqProgress[idx] = { loaded: 0 };
-                    batchRequests.push(
+                    partRequests.push(
                         trackedRequest(
                             parts[idx].signedUrl,
                             "PUT",
@@ -126,8 +131,9 @@ btnUpload.addEventListener("click", () => {
                         )
                     );
                 });
-                const batchResult = await Promise.all(batchRequests);
-                const results = batchResult.map(({ ETag, PartNumber }) => {
+
+                const partResetuls = await Promise.all(partRequests);
+                const results = partResetuls.map(({ ETag, PartNumber }) => {
                     return {
                         ETag,
                         PartNumber,
@@ -150,12 +156,10 @@ btnUpload.addEventListener("click", () => {
                 if (!completeResult.ok) throw await completeResult.json();
                 await completeResult.json();
             } catch (error) {
-                console.log(error);
                 resetUI(error);
                 reqProgress = {};
                 return;
             }
-            return;
 
             //----------------------------------------------
             token.style.display = "none";
@@ -163,7 +167,7 @@ btnUpload.addEventListener("click", () => {
             fileContainer.style.display = "none";
             statusContainer.classList.add("active");
             statusInit.classList.add("progress");
-            statusMain.textContent = "Started transcoding process";
+            statusMain.textContent = "Transcoding has started! Please wait...";
             //create websocket connection
             const socket = new WebSocket(
                 "wss://video-process-app.up.railway.app/"
@@ -234,14 +238,10 @@ btnUpload.addEventListener("click", () => {
                     case "done":
                         statusDone.classList.remove("progress");
                         statusDone.classList.add("active");
-                        //reset all classes
-                        const activeElements =
-                            document.querySelectorAll(".active");
-                        activeElements.forEach((elem) =>
-                            elem.classList.remove("active")
-                        );
-                        /* ENTER URL HERE any */
-                        statusMain.textContent = "Video iframe URL";
+                        //RESET TO DEFAULT
+                        resetUI();
+                        // ADD LINK TO THE LIST OF VIDEOS
+                        createVideoListElement(msg);
                         break;
                     default:
                         statusMain.textContent = msg;
@@ -254,6 +254,22 @@ btnUpload.addEventListener("click", () => {
     };
     fileReader.readAsArrayBuffer(theFile);
 });
+
+function createVideoListElement(link) {
+    const listElem = document.createElement("li");
+    listElem.textContent = link;
+    listElem.addEventListener("click", () => {
+        videoPlayer.setAttribute("src", `/video?v=${link}`);
+    });
+    videosList.prepend(listElem);
+}
+
+async function getVideoList() {
+    const result = await fetch("/videos").then((res) => res.json());
+    result.videoNames.forEach((item) => {
+        createVideoListElement(item.name);
+    });
+}
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
     return new Promise((resolve, reject) => {
@@ -291,9 +307,19 @@ function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
 }
 
 function resetUI(error) {
-    statusMain.textContent = error.message;
+    if (error) {
+        statusMain.textContent = error.message;
+    }
+    //remove styles from lines
+    firstLine.style.removeProperty("--line-color-1");
+    secondLine.style.removeProperty("--line-color-2");
+    transcodeLine1.style.removeProperty("--line-color-1");
+    transcodeLine2.style.removeProperty("--line-color-2");
+    transcodeLine3.style.removeProperty("--line-color-3");
+    //reset buttons and inputs
     btnUpload.disabled = false;
     file.disabled = false;
+    fileSelected.textContent = String.fromCharCode(160);
     //reset all active classes
     const activeElements = document.querySelectorAll(".active");
     activeElements.forEach((elem) => elem.classList.remove("active"));

@@ -13,9 +13,13 @@ import helmet from "helmet";
 import path from "path";
 import errorHandlerMiddleware from "./middleware/error-handle";
 import notFound from "./middleware/not-found";
+import { Storage } from "@google-cloud/storage";
+import mongoose from "mongoose";
+import Video from "./model";
 
-const BUCKET_NAME = process.env.GCP_BUCKET_NAME!;
+const BUCKET_NAME = process.env.GCP_RAW_BUCKET!;
 
+//api for multipart upload
 const bucketClient = new S3Client({
     endpoint: "https://storage.googleapis.com",
     credentials: {
@@ -25,9 +29,22 @@ const bucketClient = new S3Client({
     region: process.env.GCP_BUCKET_REGION!,
 });
 
-const app = express();
+const storage = new Storage({
+    projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
+    credentials: {
+        type: "service_account",
+        private_key: process.env
+            .GOOGLE_STORAGE_PRIVATE_KEY!.split(String.raw`\n`)
+            .join("\n"),
+        client_email: process.env.GOOGLE_STORAGE_EMAIL,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        token_url: "https://oauth2.googleapis.com/token",
+    },
+});
 
-app.set("engine", "view");
+const app = express();
+mongoose.set("strictQuery", false);
+mongoose.connect(process.env.MONGO_URL!);
 
 app.use(
     helmet({
@@ -129,6 +146,49 @@ app.post("/complete-upload", limiter, async (req, res) => {
     });
     await bucketClient.send(command);
     res.json({ success: true });
+});
+
+app.get("/video", async (req, res) => {
+    const queryVideo = req.query.v as string;
+    const videoName = (queryVideo || "test") + ".mp4";
+    // Ensure there is a range given for the video
+    const range = req.headers.range!;
+    if (!range) {
+        res.status(400).send("Requires Range header");
+    }
+    const file = storage.bucket(process.env.GCP_PROD_BUCKET!).file(videoName);
+    const metadata = await file.getMetadata();
+    if (!metadata) throw new CustomError("Content Not Found", 404);
+    const videoSize = metadata[0].size;
+
+    // Parse Range
+    // Example: "bytes=32324-"
+    const CHUNK_SIZE = 3 * 10 ** 6; // 3MB
+    const start = Number(range.replace(/\D/g, ""));
+    const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+
+    // Create headers
+    const contentLength = end - start + 1;
+    const headers = {
+        "Content-Range": `bytes ${start}-${end}/${videoSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": contentLength,
+        "Content-Type": "video/mp4",
+    };
+
+    // HTTP Status 206 for Partial Content
+    res.writeHead(206, headers);
+
+    // create video read stream for this particular chunk
+    const videoStream = file.createReadStream({ start, end });
+
+    // Stream the video chunk to the client
+    videoStream.pipe(res);
+});
+
+app.get("/videos", async (req, res) => {
+    const videoNames = await Video.find({}).select({ name: 1, _id: 0 });
+    res.json({ videoNames });
 });
 
 app.use(notFound);

@@ -1,7 +1,7 @@
 :root {
     box-sizing: border-box;
     --status-inactive: rgb(25, 25, 25);
-    --status-active: white;
+    --status-active: mediumpurple;
     --status-main: pink;
     --circle-inactive: #373737;
     --status-circle-inactive: #5a5a5a;

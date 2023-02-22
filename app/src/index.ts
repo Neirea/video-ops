@@ -52,6 +52,7 @@ app.use(
             directives: {
                 "connect-src": [
                     process.env.RAILWAY_STATIC_URL || "http://localhost:5000",
+                    process.env.WS_URL || "ws://localhost:8080",
                     `https://${process.env.GCP_RAW_BUCKET}.storage.googleapis.com`,
                 ],
             },

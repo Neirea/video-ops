@@ -60,8 +60,8 @@ btnUpload.addEventListener("click", () => {
     fileReader.onload = async (ev) => {
         const fileSize = ev.target.result.byteLength;
         //check if file is bigger than 2GB
-        if (fileSize > 2147483648) return;
-        let CHUNK_SIZE = 10485760; //10Mb - min size for chunk
+        if (fileSize > 2 * 10 ** 9) return;
+        let CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
         const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
 
         const extension = theFile.name.split(".").pop().toLowerCase();

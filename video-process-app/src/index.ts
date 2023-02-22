@@ -6,6 +6,7 @@ import "express-async-errors";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
+import { createReadStream } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import mongoose from "mongoose";
@@ -83,67 +84,54 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         }
         sendTo(fileName, {
             status: "checked",
-            msg: `Video file is correct with duration ${info.streams[0].duration}`,
+            msg: `Video is valid with duration ${info.streams[0].duration}`,
         });
     });
 
     if (isError) return;
 
-    const videoBitrate360 = "1000k";
-    const videoBitrate480 = "2500k";
-    const videoBitrate720 = "5000k";
-    const audioBitrate = "384k";
-    const width360 = 480;
-    const height360 = 360;
-    const width720 = 1280;
-    const height720 = 720;
-    const width480 = 854;
     const height480 = 480;
+    const height720 = 720;
+    const height1080 = 1080;
 
     //process files
     const commandsBatch = [];
 
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width360, height360, videoBitrate360).then(
-            (res) => {
-                sendTo(fileName, {
-                    status: "processed",
-                    msg: `${height360}p`,
-                });
-                return res;
-            }
-        )
+        ffmpegCommand(tmpInputFile, height480).then((res) => {
+            sendTo(fileName, {
+                status: "processed",
+                msg: `${height480}p`,
+            });
+            return res;
+        })
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width480, height480, videoBitrate480).then(
-            (res) => {
-                sendTo(fileName, {
-                    status: "processed",
-                    msg: `${height480}p`,
-                });
-                return res;
-            }
-        )
+        ffmpegCommand(tmpInputFile, height720).then((res) => {
+            sendTo(fileName, {
+                status: "processed",
+                msg: `${height720}p`,
+            });
+            return res;
+        })
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, width720, height720, videoBitrate720).then(
-            (res) => {
-                sendTo(fileName, {
-                    status: "processed",
-                    msg: `${height720}p`,
-                });
-                return res;
-            }
-        )
+        ffmpegCommand(tmpInputFile, height1080).then((res) => {
+            sendTo(fileName, {
+                status: "processed",
+                msg: `${height1080}p`,
+            });
+            return res;
+        })
     );
 
     try {
         await Promise.all(commandsBatch);
 
         //save it to DB
-        const low = `${fileName.split(".")[0]}_360.mp4`;
-        const normal = `${fileName.split(".")[0]}_480.mp4`;
-        const high = `${fileName.split(".")[0]}_720.mp4`;
+        const low = `${fileName.split(".")[0]}_480.mp4`;
+        const normal = `${fileName.split(".")[0]}_720.mp4`;
+        const high = `${fileName.split(".")[0]}_1080.mp4`;
 
         const url_low = bucket_prod.file(low).publicUrl();
         const url_normal = bucket_prod.file(normal).publicUrl();
@@ -166,39 +154,52 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         });
     } finally {
         //delete junk
-        await fs.unlink(tmpInputFile);
+        fs.unlink(tmpInputFile);
         await bucket_raw.file(fileName).delete();
     }
 
-    function ffmpegCommand(
-        input: string,
-        width: number,
-        height: number,
-        videoBitrate: string
-    ) {
+    function ffmpegCommand(input: string, height: number) {
         const outputFileName = `${fileName.split(".")[0]}_${height}.mp4`;
+        const outputTmp = "tmp-" + outputFileName;
         const outputStream = bucket_prod
             .file(outputFileName)
             .createWriteStream();
+
         return new Promise((resolve, reject) => {
             ffmpeg(input)
                 .setFfmpegPath(ffmpegPath)
                 .videoCodec("libx264")
-                .size(`${width}x${height}`)
+                .size(`?x${height}`)
+                .aspect("16:9")
                 .fps(30)
-                .videoBitrate(videoBitrate)
-                .audioBitrate(audioBitrate)
+                .audioBitrate("192k")
                 .autopad()
                 .outputFormat("mp4")
-                .outputOptions("-preset fast")
-                .outputOptions(["-movflags frag_keyframe+empty_moov"])
-                .pipe(outputStream, { end: true })
-                .on("finish", async () => {
-                    resolve(outputFileName);
+                .outputOptions([
+                    "-preset veryslow",
+                    "-vf colormatrix=bt470bg:bt709",
+                    "-color_range 1",
+                    "-colorspace 1",
+                    "-color_primaries 1",
+                    "-color_trc 1",
+                    "-movflags +faststart",
+                    "-crf 28",
+                ])
+                .output(outputTmp)
+                .on("end", async () => {
+                    //upload to google cloud storage
+                    createReadStream(outputTmp)
+                        .pipe(outputStream)
+                        .on("finish", () => {
+                            //delete output after upload
+                            fs.unlink(outputTmp);
+                            resolve(outputFileName);
+                        });
                 })
                 .on("error", (err) => {
                     reject(err.message);
-                });
+                })
+                .run();
         });
     }
 });

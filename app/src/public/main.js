@@ -165,7 +165,7 @@ btnUpload.addEventListener("click", () => {
                         statusInit.classList.remove("progress");
                         statusInit.classList.add("active");
                         statusVideo.classList.add("progress");
-                        statusInit.style.setProperty(
+                        status1.style.setProperty(
                             "--line-color-1",
                             "var(--status-active)"
                         );
@@ -293,8 +293,8 @@ function resetUI(error) {
         statusMain.textContent = error.message;
     }
     //remove styles from lines
-    statusInit.style.removeProperty("--line-color-1");
-    statusVideo.style.removeProperty("--line-color-2");
+    status1.style.removeProperty("--line-color-1");
+    status2.style.removeProperty("--line-color-2");
     status480.style.removeProperty("--line-color-1");
     status720.style.removeProperty("--line-color-2");
     status1080.style.removeProperty("--line-color-3");

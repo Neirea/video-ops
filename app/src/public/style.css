@@ -248,7 +248,7 @@ button:disabled {
     gap: 1rem;
 }
 
-.status-video-details li > span.status-360::after {
+.status-video-details li > span.status-480::after {
     content: "";
     width: 2.5rem;
     height: 0.125rem;
@@ -261,7 +261,7 @@ button:disabled {
     bottom: 0;
 }
 
-.status-video-details li > span.status-480::after {
+.status-video-details li > span.status-720::after {
     content: "";
     width: 1.15rem;
     height: 0.125rem;
@@ -271,7 +271,7 @@ button:disabled {
     top: -0.55rem;
 }
 
-.status-video-details li > span.status-720::after {
+.status-video-details li > span.status-1080::after {
     content: "";
     width: 2.5rem;
     height: 0.125rem;

@@ -15,9 +15,9 @@ const statusError = document.querySelector(".status-error");
 // transcoding elements
 const statusInit = document.querySelector(".status-init");
 const statusVideo = document.querySelector(".status-video");
-const status360 = document.querySelector(".status-360");
 const status480 = document.querySelector(".status-480");
 const status720 = document.querySelector(".status-720");
+const status1080 = document.querySelector(".status-1080");
 const statusDone = document.querySelector(".status-done");
 
 // url of video
@@ -188,9 +188,9 @@ btnUpload.addEventListener("click", () => {
                             "--line-color-1",
                             "var(--status-active)"
                         );
-                        status360.classList.add("progress");
                         status480.classList.add("progress");
                         status720.classList.add("progress");
+                        status1080.classList.add("progress");
                         transcodeLine1.style.setProperty(
                             "--line-color-1",
                             "var(--status-active)"
@@ -206,11 +206,6 @@ btnUpload.addEventListener("click", () => {
                         statusMain.textContent = msg;
                         break;
                     case "processed":
-                        if (msg === "360p") {
-                            status360.classList.remove("progress");
-                            status360.classList.add("active");
-                            statusMain.textContent = msg + " processed";
-                        }
                         if (msg === "480p") {
                             status480.classList.remove("progress");
                             status480.classList.add("active");
@@ -221,10 +216,15 @@ btnUpload.addEventListener("click", () => {
                             status720.classList.add("active");
                             statusMain.textContent = msg + " processed";
                         }
+                        if (msg === "1080p") {
+                            status1080.classList.remove("progress");
+                            status1080.classList.add("active");
+                            statusMain.textContent = msg + " processed";
+                        }
                         if (
-                            status360.classList.contains("active") &&
                             status480.classList.contains("active") &&
-                            status720.classList.contains("active")
+                            status720.classList.contains("active") &&
+                            status1080.classList.contains("active")
                         ) {
                             statusVideo.classList.remove("progress");
                             statusVideo.classList.add("active");
@@ -319,6 +319,7 @@ function resetUI(error) {
     //reset buttons and inputs
     btnUpload.disabled = false;
     file.disabled = false;
+    fileSelected.value = undefined;
     fileSelected.textContent = String.fromCharCode(160);
     //reset all active classes
     const activeElements = document.querySelectorAll(".active");

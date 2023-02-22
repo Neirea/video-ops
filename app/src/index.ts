@@ -51,7 +51,7 @@ app.use(
         contentSecurityPolicy: {
             directives: {
                 "connect-src": [
-                    process.env.SERVER_URL || "http://localhost:5000",
+                    process.env.RAILWAY_STATIC_URL || "http://localhost:5000",
                     `https://${process.env.GCP_RAW_BUCKET}.storage.googleapis.com`,
                 ],
             },

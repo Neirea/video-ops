@@ -52,7 +52,7 @@ app.use(
             directives: {
                 "connect-src": [
                     process.env.SERVER_URL || "http://localhost:5000",
-                    `https://${process.env.GCP_BUCKET_NAME}.storage.googleapis.com`,
+                    `https://${process.env.GCP_RAW_BUCKET}.storage.googleapis.com`,
                 ],
             },
         },

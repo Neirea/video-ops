@@ -13,33 +13,16 @@ const statusContainer = document.querySelector(".status-container");
 const statusMain = document.querySelector(".status-main");
 const statusError = document.querySelector(".status-error");
 // transcoding elements
-const statusInit = document.querySelector(".status-init");
-const statusVideo = document.querySelector(".status-video");
-const status480 = document.querySelector(".status-480");
-const status720 = document.querySelector(".status-720");
-const status1080 = document.querySelector(".status-1080");
+const statusInit = document.querySelector(".status-init"); //first line
+const statusVideo = document.querySelector(".status-video"); //second line
+const status480 = document.querySelector(".status-480"); //480p line
+const status720 = document.querySelector(".status-720"); //720p line
+const status1080 = document.querySelector(".status-1080"); //1080p line
 const statusDone = document.querySelector(".status-done");
 
 // url of video
 let params = new URL(document.location).searchParams;
 let video = params.get("video");
-
-// transcoding lines
-const firstLine = document.querySelector(
-    ".status-container > .status:first-child"
-);
-const secondLine = document.querySelector(
-    ".status-container > .status:nth-child(2)"
-);
-const transcodeLine1 = document.querySelector(
-    ".status-video-details li > span.status-360"
-);
-const transcodeLine2 = document.querySelector(
-    ".status-video-details li > span.status-480"
-);
-const transcodeLine3 = document.querySelector(
-    ".status-video-details li > span.status-720"
-);
 
 getVideoList();
 
@@ -184,22 +167,22 @@ btnUpload.addEventListener("click", () => {
                         statusInit.classList.remove("progress");
                         statusInit.classList.add("active");
                         statusVideo.classList.add("progress");
-                        firstLine.style.setProperty(
+                        statusInit.style.setProperty(
                             "--line-color-1",
                             "var(--status-active)"
                         );
                         status480.classList.add("progress");
                         status720.classList.add("progress");
                         status1080.classList.add("progress");
-                        transcodeLine1.style.setProperty(
+                        status480.style.setProperty(
                             "--line-color-1",
                             "var(--status-active)"
                         );
-                        transcodeLine2.style.setProperty(
+                        status720.style.setProperty(
                             "--line-color-2",
                             "var(--status-active)"
                         );
-                        transcodeLine3.style.setProperty(
+                        status1080.style.setProperty(
                             "--line-color-3",
                             "var(--status-active)"
                         );
@@ -228,7 +211,7 @@ btnUpload.addEventListener("click", () => {
                         ) {
                             statusVideo.classList.remove("progress");
                             statusVideo.classList.add("active");
-                            secondLine.style.setProperty(
+                            statusVideo.style.setProperty(
                                 "--line-color-2",
                                 "var(--status-active)"
                             );
@@ -311,11 +294,11 @@ function resetUI(error) {
         statusMain.textContent = error.message;
     }
     //remove styles from lines
-    firstLine.style.removeProperty("--line-color-1");
-    secondLine.style.removeProperty("--line-color-2");
-    transcodeLine1.style.removeProperty("--line-color-1");
-    transcodeLine2.style.removeProperty("--line-color-2");
-    transcodeLine3.style.removeProperty("--line-color-3");
+    statusInit.style.removeProperty("--line-color-1");
+    statusVideo.style.removeProperty("--line-color-2");
+    status480.style.removeProperty("--line-color-1");
+    status720.style.removeProperty("--line-color-2");
+    status1080.style.removeProperty("--line-color-3");
     //reset buttons and inputs
     btnUpload.disabled = false;
     file.disabled = false;

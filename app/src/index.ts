@@ -15,7 +15,7 @@ import errorHandlerMiddleware from "./middleware/error-handle";
 import notFound from "./middleware/not-found";
 import { Storage } from "@google-cloud/storage";
 import mongoose from "mongoose";
-import Video from "./model";
+import { Video, Token } from "./model";
 
 const BUCKET_NAME = process.env.GCP_RAW_BUCKET!;
 
@@ -84,8 +84,9 @@ class CustomError extends Error {
 }
 
 app.post("/create-upload", limiter, async (req, res) => {
-    const token = req.headers["token"];
-    if (token !== process.env.TOKEN) {
+    const token = req.headers["token"] as string;
+    const tokens = await Token.find({ charges: { $gte: 1 } });
+    if (!tokens.map((i) => i.token).includes(token)) {
         throw new CustomError("Access Denied", 403);
     }
     const name = req.body.name;
@@ -100,8 +101,9 @@ app.post("/create-upload", limiter, async (req, res) => {
 });
 
 app.post("/get-upload-urls", async (req, res) => {
-    const token = req.headers["token"];
-    if (token !== process.env.TOKEN) {
+    const token = req.headers["token"] as string;
+    const tokens = await Token.find({ charges: { $gte: 1 } });
+    if (!tokens.map((i) => i.token).includes(token)) {
         throw new CustomError("Access Denied", 403);
     }
     const { Key, UploadId, parts } = req.body;
@@ -131,8 +133,9 @@ app.post("/get-upload-urls", async (req, res) => {
 });
 
 app.post("/complete-upload", limiter, async (req, res) => {
-    const token = req.headers["token"];
-    if (token !== process.env.TOKEN) {
+    const token = req.headers["token"] as string;
+    const tokens = await Token.find({ charges: { $gte: 1 } });
+    if (!tokens.map((i) => i.token).includes(token)) {
         throw new CustomError("Access Denied", 403);
     }
     const { Key, UploadId, parts } = req.body;
@@ -146,6 +149,12 @@ app.post("/complete-upload", limiter, async (req, res) => {
         },
     });
     await bucketClient.send(command);
+
+    //decrement until 0
+    await Token.updateOne(
+        { token: token, charges: { $gte: 1 } },
+        { $inc: { charges: -1 } }
+    );
     res.json({ success: true });
 });
 

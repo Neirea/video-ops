@@ -149,6 +149,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     }
 
     function ffmpegCommand(input: string, height: number) {
+        const width = Math.ceil((height / 9) * 16);
         const outputFileName = `${dbName}_${height}.mp4`;
         const outputTmp = "tmp-" + outputFileName;
         const outputStream = bucket_prod
@@ -158,22 +159,19 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         return new Promise((resolve, reject) => {
             ffmpeg(input)
                 .setFfmpegPath(ffmpegPath)
-                .videoCodec("libx264")
-                .size(`?x${height}`)
-                .aspect("16:9")
-                .fps(30)
-                .audioBitrate("192k")
-                .autopad()
-                .outputFormat("mp4")
                 .outputOptions([
-                    "-preset veryslow",
+                    "-c:v libx264",
+                    "-preset veryslow", //slower=>better quality
+                    "-r 30", //fps 30
+                    "-b:a 192k", //audio bitrate
+                    `-vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:-1:-1:color=black`, //pad with black bars
                     "-vf colormatrix=bt470bg:bt709",
                     "-color_range 1",
                     "-colorspace 1",
                     "-color_primaries 1",
                     "-color_trc 1",
-                    "-movflags +faststart",
-                    "-crf 28",
+                    "-movflags +faststart", //pushes info to beginning
+                    "-crf 28", //scale bitrate dynamically
                 ])
                 .output(outputTmp)
                 .on("end", async () => {

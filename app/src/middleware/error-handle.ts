@@ -9,10 +9,7 @@ const errorHandlerMiddleware = (
     // set default error
     const customError = {
         statusCode: err.statusCode || 500,
-        message:
-            err.message && err.message.length < 50
-                ? err.message
-                : "Something went wrong try again later",
+        message: err.message,
     };
 
     console.log(err);

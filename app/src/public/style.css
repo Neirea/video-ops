@@ -226,7 +226,7 @@ video::-webkit-media-controls-enclosure {
 }
 .volume-container:hover .volume-slider,
 .volume-slider:focus-within {
-    width: 100px;
+    width: 6.25rem;
     transform: scaleX(1);
 }
 /* duration */
@@ -242,7 +242,7 @@ video::-webkit-media-controls-enclosure {
 }
 /* timeline */
 .timeline-container {
-    height: 7px;
+    height: 0.375rem;
     margin-inline: 0.5rem;
     cursor: pointer;
     display: flex;
@@ -274,7 +274,7 @@ video::-webkit-media-controls-enclosure {
     background-color: rgb(76, 0, 255);
     z-index: 1;
 }
-.timeline .preview-img {
+/* .timeline .preview-img {
     position: absolute;
     height: 80px;
     aspect-ratio: 16 / 9;
@@ -284,7 +284,7 @@ video::-webkit-media-controls-enclosure {
     border-radius: 0.25rem;
     border: 2px solid white;
     display: none;
-}
+} */
 .timeline .thumb-indicator {
     --scale: 0;
     position: absolute;

@@ -42,14 +42,13 @@ const queryParams = new URLSearchParams(window.location.search);
 const videoParam = queryParams.get("v");
 const qualityParam = queryParams.get("q");
 
-if (videoParam) {
-    video.setAttribute("src", `/video?v=${videoParam}`);
-    //figure out quality .. any
-}
-
 // fetches list of videos
 getVideoList();
+let isScrubbing = false;
+let wasPaused;
 
+// default video
+if (!window.location.search) videoDesc.textContent = "Default video";
 appTitle.addEventListener("click", () => {
     window.location.href = "/";
 });
@@ -140,7 +139,7 @@ video.addEventListener("loadeddata", () => {
 });
 video.addEventListener("timeupdate", () => {
     currentTime.textContent = formatDuration(video.currentTime);
-    const percent = video.currentTime / video.duration;
+    const percent = video.currentTime / (video.duration || 1); // duration is NaN until video is loaded
     timelineContainer.style.setProperty("--progress-position", percent);
 });
 // playback speed
@@ -389,8 +388,6 @@ btnUpload.addEventListener("click", () => {
 });
 
 //timeline
-let isScrubbing = false;
-let wasPaused;
 function toggleScrubbing(e) {
     const rect = timelineContainer.getBoundingClientRect();
     const percent =
@@ -422,6 +419,7 @@ function handleTimelineUpdate(e) {
     if (isScrubbing) {
         e.preventDefault();
         // thumbnailImg.src = previewImgSrc;
+        console.log(percent);
         timelineContainer.style.setProperty("--progress-position", percent);
     }
 }
@@ -470,9 +468,9 @@ function createVideoListElement(name, url) {
         if (window.location.href !== prevUrl) {
             history.pushState({ path: newUrl }, "", newUrl);
             prevUrl = window.location.href;
+            videoDesc.textContent = name;
+            video.setAttribute("src", `/video?v=${url}`);
         }
-        videoDesc.textContent = name;
-        video.setAttribute("src", `/video?v=${url}`);
     });
     videosList.prepend(listElem);
 }
@@ -482,6 +480,14 @@ async function getVideoList() {
     result.videoNames.forEach((item) => {
         createVideoListElement(item.name, item.url);
     });
+    if (videoParam) {
+        const videoItem = result.videoNames.find(
+            (item) => item.url === videoParam
+        );
+        videoDesc.textContent = videoItem.name || "Error 404";
+        video.setAttribute("src", `/video?v=${videoParam}`);
+        //figure out quality .. any
+    }
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {

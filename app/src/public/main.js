@@ -50,7 +50,7 @@ let prevVideo;
 
 // default
 if (localStorage.getItem("quality") == null) {
-    localStorage.setItem("quality", "1080p");
+    localStorage.setItem("quality", "1080");
 }
 qualityBtn.textContent = localStorage.getItem("quality") + "p";
 if (!window.location.search) queryParams.set("v", "test");

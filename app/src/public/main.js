@@ -1,10 +1,13 @@
+const appTitle = document.querySelector(".app-title");
 const tokenInput = document.querySelector(".token-input");
+const fileNameInput = document.querySelector(".filename-input");
 const btnUpload = document.querySelector(".btn-upload");
 const fileContainer = document.querySelector(".file-container");
 const fileSelected = document.querySelector(".file-selected");
 const file = document.querySelector(".file");
 const fileLabel = document.querySelector(".file-label");
-const token = document.querySelector(".token");
+const tokenElem = document.querySelector(".token");
+const fileNameElem = document.querySelector(".filename");
 const videosList = document.querySelector(".video-list");
 // message elements
 const statusContainer = document.querySelector(".status-container");
@@ -34,8 +37,21 @@ const timelineContainer = document.querySelector(".timeline-container");
 const previewImg = document.querySelector("preview-img");
 const thumbnailImg = document.querySelector("thumbnail-img");
 
+const queryParams = new URLSearchParams(window.location.search);
+const videoParam = queryParams.get("v");
+const qualityParam = queryParams.get("q");
+
+if (videoParam) {
+    videoPlayer.setAttribute("src", `/video?v=${videoParam}`);
+    //figure out quality .. any
+}
+
 // fetches list of videos
 getVideoList();
+
+appTitle.addEventListener("click", () => {
+    window.location.href = "/";
+});
 
 // keyboard events
 document.addEventListener("keydown", (e) => {
@@ -152,6 +168,8 @@ btnUpload.addEventListener("click", () => {
     const fileReader = new FileReader();
     const theFile = file.files[0];
 
+    if (fileNameInput.value.length < 2) return;
+
     fileReader.onload = async (ev) => {
         const fileSize = ev.target.result.byteLength;
         //check if file is bigger than 2GB
@@ -162,7 +180,7 @@ btnUpload.addEventListener("click", () => {
         const extension = theFile.name.split(".").pop().toLowerCase();
         //can't do more than 10000 chunks for s3
         const isSuccess = chunkCount <= 10000;
-        const fileName = crypto.randomUUID() + `.${extension}`;
+        const fileName = generateShortId() + `.${extension}`;
 
         if (isSuccess) {
             btnUpload.disabled = true;
@@ -257,7 +275,8 @@ btnUpload.addEventListener("click", () => {
             }
 
             //----------------------------------------------
-            token.style.display = "none";
+            tokenElem.style.display = "none";
+            fileNameElem.style.display = "none";
             btnUpload.style.display = "none";
             fileContainer.style.display = "none";
             statusContainer.classList.add("active");
@@ -269,11 +288,15 @@ btnUpload.addEventListener("click", () => {
             );
             socket.addEventListener("open", () => {
                 socket.send(
-                    JSON.stringify({ type: "upload", fileName: fileName })
+                    JSON.stringify({
+                        type: "upload",
+                        fileName: fileName,
+                        dbName: fileNameInput.value,
+                    })
                 );
             });
             socket.addEventListener("message", (event) => {
-                const { status, msg } = JSON.parse(event.data);
+                const { status, msg, name } = JSON.parse(event.data);
                 switch (status) {
                     case "checked":
                         statusInit.classList.remove("progress");
@@ -343,7 +366,7 @@ btnUpload.addEventListener("click", () => {
                         resetUI();
                         statusMain.textContent = "Finished uploading";
                         // ADD LINK TO THE LIST OF VIDEOS
-                        createVideoListElement(msg);
+                        createVideoListElement(msg, name);
                         break;
                     default:
                         statusMain.textContent = msg;
@@ -428,10 +451,19 @@ function changePlaybackSpeed() {
     speedBtn.textContent = `${newPlaybackRate}x`;
 }
 
-function createVideoListElement(link) {
+let prevUrl;
+function createVideoListElement(link, name) {
     const listElem = document.createElement("li");
-    listElem.textContent = link;
+    listElem.textContent = name;
     listElem.addEventListener("click", () => {
+        queryParams.set("v", link);
+        const newUrl = "?" + queryParams.toString();
+        // Use pushState to update the URL without reloading the page
+        if (window.location.href !== prevUrl) {
+            history.pushState({ path: newUrl }, "", newUrl);
+            prevUrl = window.location.href;
+        }
+
         videoPlayer.setAttribute("src", `/video?v=${link}`);
     });
     videosList.prepend(listElem);
@@ -440,7 +472,7 @@ function createVideoListElement(link) {
 async function getVideoList() {
     const result = await fetch("/videos").then((res) => res.json());
     result.videoNames.forEach((item) => {
-        createVideoListElement(item.name);
+        createVideoListElement(item.name, item.url);
     });
 }
 
@@ -490,7 +522,8 @@ function resetUI(error) {
     status720.style.removeProperty("--line-color-2");
     status1080.style.removeProperty("--line-color-3");
     //display reset
-    token.style.display = "flex";
+    tokenElem.style.display = "flex";
+    fileNameElem.style.display = "flex";
     btnUpload.style.display = "inline-block";
     fileContainer.style.display = "flex";
     //reset buttons and inputs
@@ -508,4 +541,11 @@ function resetUI(error) {
     status480.textContent = "?";
     status720.textContent = "?";
     status1080.textContent = "?";
+}
+
+function generateShortId() {
+    const uuid = crypto.randomUUID();
+    const uuidBytes = new TextEncoder().encode(uuid.replace(/-/g, ""));
+    const encoded = btoa(String.fromCharCode(...uuidBytes));
+    return encoded.slice(0, 10);
 }

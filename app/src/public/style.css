@@ -23,7 +23,7 @@ body {
         "Helvetica Neue", sans-serif;
 }
 
-header {
+h1 {
     text-align: center;
     color: var(--status-active);
     font-size: 2.25rem;
@@ -77,11 +77,14 @@ li {
         font-size: 2.85vw;
     }
 }
-h1,
+.app-title {
+    cursor: pointer;
+}
+h2,
 .video-list {
     text-align: center;
 }
-h1 {
+h2 {
     font-size: 1.75rem;
     color: var(--status-active);
 }
@@ -329,13 +332,15 @@ video::-webkit-media-controls-enclosure {
 }
 
 /* TOKEN */
-.token {
+.token,
+.filename {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
 }
-.token-input {
+.token-input,
+.filename-input {
     height: 1.5rem;
     width: 15rem;
     font-size: 1.25rem;

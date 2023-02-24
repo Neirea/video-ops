@@ -19,6 +19,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 let wschat: { [key: string]: WebSocket } = {};
+let dbNames: { [key: string]: string } = {};
 
 wss.on("connection", (socket) => {
     socket.on("message", (rawData) => {
@@ -27,6 +28,7 @@ wss.on("connection", (socket) => {
         if (data.type === "upload" && !wschat[data.fileName]) {
             console.log(`Joined chat with id: ${data.fileName}`);
             wschat[data.fileName] = socket;
+            dbNames[data.fileName] = data.dbName;
         }
     });
 });
@@ -70,7 +72,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         Buffer.from(req.body.message.data, "base64").toString().trim()
     );
     const fileName: string = data.name;
-    const dbName = fileName.split(".")[0];
+    const urlName = fileName.split(".")[0];
     //get file out of storage
     const tmpInputFile = `input-${fileName}`;
     await bucket_raw.file(fileName).download({ destination: tmpInputFile });
@@ -132,12 +134,15 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         await Promise.all(commandsBatch);
 
         //save it to DB
+        const videoName = dbNames[fileName] || urlName;
         await Video.create({
-            name: dbName,
+            name: videoName,
+            url: urlName,
         });
         sendTo(fileName, {
             status: "done",
-            msg: dbName,
+            msg: urlName,
+            name: videoName,
         });
     } catch (err) {
         sendTo(fileName, {
@@ -152,7 +157,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
 
     function ffmpegCommand(input: string, height: number) {
         const width = Math.ceil((height / 9) * 16);
-        const outputFileName = `${dbName}_${height}.mp4`;
+        const outputFileName = `${urlName}_${height}.mp4`;
         const outputTmp = "tmp-" + outputFileName;
         const outputStream = bucket_prod
             .file(outputFileName)

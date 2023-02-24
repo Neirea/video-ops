@@ -11,10 +11,25 @@
     <body>
         <main>
             <div id="left">
-                <header>Video Ops</header>
+                <h1 class="app-title">Video Ops</h1>
                 <div class="token">
                     <label for="tkn-i">Enter your token</label>
-                    <input id="tkn-i" class="token-input" type="text" />
+                    <input
+                        id="tkn-i"
+                        class="token-input"
+                        type="text"
+                        required
+                    />
+                </div>
+                <div class="filename">
+                    <label for="fn-i">Enter video name</label>
+                    <input
+                        id="fn-i"
+                        class="filename-input"
+                        type="text"
+                        required
+                        minlength="2"
+                    />
                 </div>
                 <div class="file-container">
                     <input
@@ -57,7 +72,7 @@
                 </ul>
                 <div class="status-main">&nbsp;</div>
                 <div>
-                    <h1>Uploaded Videos</h1>
+                    <h2>Uploaded Videos</h2>
                     <ul class="video-list"></ul>
                 </div>
             </div>
@@ -150,7 +165,7 @@
                         </div>
                     </div>
                 </div>
-                <h2 class="video-desc">test-video</h2>
+                <h3 class="video-desc">test-video</h3>
             </div>
         </main>
     </body>

@@ -202,7 +202,7 @@ app.get("/video", async (req, res) => {
 });
 
 app.get("/videos", async (req, res) => {
-    const videoNames = await Video.find({}).select({ name: 1, _id: 0 });
+    const videoNames = await Video.find({}).select({ name: 1, url: 1, _id: 0 });
     res.json({ videoNames });
 });
 

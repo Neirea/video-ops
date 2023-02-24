@@ -2,6 +2,9 @@
     --status-inactive: rgb(25, 25, 25);
     --status-active: mediumpurple;
     --status-main: pink;
+    --slider-color: rgb(76, 0, 255);
+    --btn-inactive: rgb(100, 100, 100);
+    --unfilled: rgba(100, 100, 100, 0.5);
     --circle-inactive: #373737;
     --status-circle-inactive: #5a5a5a;
     --left-color: #26282c;
@@ -15,7 +18,7 @@ html {
     margin: 0;
 }
 body {
-    background-color: rgb(25, 25, 25);
+    background-color: var(--status-inactive);
     color: white;
     min-height: 90vh;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
@@ -89,6 +92,8 @@ h2 {
     color: var(--status-active);
 }
 .video-list li {
+    font-size: 1.25rem;
+    line-height: 1.5;
     cursor: pointer;
 }
 
@@ -249,7 +254,7 @@ video::-webkit-media-controls-enclosure {
     align-items: center;
 }
 .timeline {
-    background-color: rgba(100, 100, 100, 0.5);
+    background-color: var(--unfilled);
     height: 3px;
     width: 100%;
     position: relative;
@@ -271,7 +276,7 @@ video::-webkit-media-controls-enclosure {
     top: 0;
     bottom: 0;
     right: calc(100% - var(--progress-position) * 100%);
-    background-color: rgb(76, 0, 255);
+    background-color: var(--slider-color);
     z-index: 1;
 }
 /* .timeline .preview-img {
@@ -292,7 +297,7 @@ video::-webkit-media-controls-enclosure {
     height: 200%;
     top: -50%;
     left: calc(var(--progress-position) * 100%);
-    background-color: mediumpurple;
+    background-color: var(--status-active);
     border-radius: 50%;
     transition: transform 150ms ease-in-out;
     aspect-ratio: 1 / 1;
@@ -381,7 +386,7 @@ video::-webkit-media-controls-enclosure {
     border: 1px solid white;
     border-radius: 0.25rem;
     font-size: 1.25rem;
-    background-color: rgb(25, 25, 25);
+    background-color: var(--status-inactive);
 }
 .file-selected,
 .status-main {
@@ -392,8 +397,8 @@ video::-webkit-media-controls-enclosure {
     white-space: nowrap;
 }
 .file:disabled + .file-label {
-    border-color: rgb(100, 100, 100);
-    color: rgb(100, 100, 100);
+    border-color: var(--btn-inactive);
+    color: var(--btn-inactive);
     cursor: not-allowed;
 }
 .file:not(:disabled) + .file-label:hover {
@@ -405,7 +410,7 @@ video::-webkit-media-controls-enclosure {
 .btn-upload {
     appearance: none;
     line-height: 1.5;
-    background-color: rgb(25, 25, 25);
+    background-color: var(--status-inactive);
     color: white;
     border-radius: 0.25rem;
     border: 1px solid white;
@@ -416,8 +421,8 @@ video::-webkit-media-controls-enclosure {
         "Helvetica Neue", sans-serif;
 }
 .btn-upload:disabled {
-    border-color: rgb(100, 100, 100);
-    color: rgb(100, 100, 100);
+    border-color: var(--btn-inactive);
+    color: var(--btn-inactive);
     cursor: not-allowed;
 }
 .btn-upload:not(:disabled):hover {
@@ -553,4 +558,42 @@ video::-webkit-media-controls-enclosure {
     right: 1.25rem;
 }
 
-/* loading */
+/* custom volume slider */
+.volume-slider {
+    width: 0;
+    transition: width 0.2s linear;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    height: 0.3rem;
+    background: linear-gradient(90deg, white, var(--unfilled) 0%);
+    border-radius: 1rem;
+}
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+}
+.volume-slider::-moz-range-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+}
+/* hover effects */
+.volume-slider:hover {
+    cursor: pointer;
+}
+.volume-slider:hover::-webkit-slider-thumb {
+    opacity: 1;
+}
+.volume-slider:hover::-moz-range-thumb {
+    opacity: 1;
+}

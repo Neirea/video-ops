@@ -128,6 +128,9 @@ video.volume = localStorage.getItem("volume") || 0.5;
 muteBtn.addEventListener("click", toggleMute);
 video.addEventListener("volumechange", () => {
     volumeSlider.value = video.volume;
+    volumeSlider.style.background = `linear-gradient(90deg, white ${
+        video.volume * 100
+    }%, gray 0%)`;
     let volumeLevel;
     if (video.muted || video.volume === 0) {
         volumeSlider.value = 0;

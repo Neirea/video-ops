@@ -49,7 +49,7 @@ let wasPaused;
 let prevVideo;
 
 // default video
-if (!window.location.search) videoDesc.textContent = "Default video";
+if (!window.location.search) queryParams.set("v", "test");
 appTitle.addEventListener("click", () => {
     window.location.href = "/";
 });
@@ -522,19 +522,18 @@ function createVideoListElement(name, url) {
 
 async function getVideoList() {
     const result = await fetch("/videos").then((res) => res.json());
+    result.videoNames.push({ name: "Default video", url: "test" });
     result.videoNames.forEach((item) => {
         createVideoListElement(item.name, item.url);
     });
     const videoParam = queryParams.get("v");
     if (videoParam) {
-        const videoItem = result.videoNames.find(
-            (item) => item.url === videoParam
-        );
+        const videoItem = items.find((item) => item.url === videoParam);
         videoDesc.textContent = videoItem.name || "Error 404";
         const quality = localStorage.getItem("quality") || 1080;
         video.setAttribute("src", `/video?v=${videoParam}&q=${quality}`);
     }
-    return result.videoNames;
+    return videoNames;
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {

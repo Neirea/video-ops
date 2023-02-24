@@ -35,15 +35,17 @@ const currentTime = document.querySelector(".current-time");
 const totalTime = document.querySelector(".total-time");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
-const previewImg = document.querySelector("preview-img");
-const thumbnailImg = document.querySelector("thumbnail-img");
+const previewImg = document.querySelector(".preview-img");
+const thumbnailImg = document.querySelector(".thumbnail-img");
+const resolutionBtn = document.querySelector(".resolution-btn");
+const qualityList = document.querySelector(".quality-list");
 
-const queryParams = new URLSearchParams(window.location.search);
+let queryParams = new URLSearchParams(window.location.search);
 const videoParam = queryParams.get("v");
 const qualityParam = queryParams.get("q");
 
 // fetches list of videos
-getVideoList();
+const videos = getVideoList();
 let isScrubbing = false;
 let wasPaused;
 
@@ -53,10 +55,20 @@ appTitle.addEventListener("click", () => {
     window.location.href = "/";
 });
 // account for moving through history
-window.addEventListener("popstate", (e) => {
-    if (!window.location.search) {
+window.addEventListener("popstate", async (e) => {
+    queryParams = new URLSearchParams(window.location.search);
+    const v = queryParams.get("v");
+    const q = queryParams.get("q");
+    if (!v) {
         videoDesc.textContent = "Default video";
         video.setAttribute("src", "/video");
+    } else if (!q) {
+        videoDesc.textContent = (await videos).find(
+            (item) => item.url === v
+        ).name;
+        video.setAttribute("src", `/video?v=${v}`);
+    } else {
+        video.setAttribute("src", `/video?v=${v}&q=${q}`);
     }
 });
 
@@ -128,7 +140,6 @@ video.addEventListener("volumechange", () => {
     videoPlayer.dataset.volumeLevel = volumeLevel;
 });
 volumeSlider.addEventListener("input", (e) => {
-    console.log(e.target.value);
     video.volume = e.target.value;
     video.muted = e.target.value === 0;
 });
@@ -136,14 +147,41 @@ volumeSlider.addEventListener("input", (e) => {
 video.addEventListener("loadeddata", () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
+    const percent = timelineContainer.style.getPropertyValue(
+        "--progress-position"
+    );
+    video.currentTime = percent * video.duration;
+    if (wasPaused === false) video.play();
 });
 video.addEventListener("timeupdate", () => {
-    currentTime.textContent = formatDuration(video.currentTime);
-    const percent = video.currentTime / (video.duration || 1); // duration is NaN until video is loaded
-    timelineContainer.style.setProperty("--progress-position", percent);
+    if (video.duration) {
+        currentTime.textContent = formatDuration(video.currentTime);
+        const percent = video.currentTime / video.duration;
+        timelineContainer.style.setProperty("--progress-position", percent);
+    }
 });
 // playback speed
-speedBtn.addEventListener("click", changePlaybackSpeed);
+speedBtn.addEventListener("click", () => {
+    let newPlaybackRate = video.playbackRate + 0.25;
+    if (newPlaybackRate > 2) newPlaybackRate = 0.25;
+    video.playbackRate = newPlaybackRate;
+    speedBtn.textContent = `${newPlaybackRate}x`;
+});
+resolutionBtn.addEventListener("click", (e) => {
+    qualityList.style.display = "block";
+});
+qualityList.addEventListener("click", (e) => {
+    const quality = parseInt(e.target.textContent);
+    queryParams.set("q", quality);
+    const newUrl = "?" + queryParams.toString();
+    // Use pushState to update the URL without reloading the page
+    if (window.location.search !== queryParams.toString()) {
+        history.replaceState(null, null, newUrl);
+        wasPaused = video.paused;
+        video.setAttribute("src", `video${newUrl}`);
+        qualityList.style.display = "none";
+    }
+});
 // full screen
 fullScreenBtn.addEventListener("click", () => {
     if (document.fullscreenElement == videoPlayer) {
@@ -419,7 +457,6 @@ function handleTimelineUpdate(e) {
     if (isScrubbing) {
         e.preventDefault();
         // thumbnailImg.src = previewImgSrc;
-        console.log(percent);
         timelineContainer.style.setProperty("--progress-position", percent);
     }
 }
@@ -450,14 +487,7 @@ function formatDuration(time) {
 function skip(duration) {
     video.currentTime += duration;
 }
-function changePlaybackSpeed() {
-    let newPlaybackRate = video.playbackRate + 0.25;
-    if (newPlaybackRate > 2) newPlaybackRate = 0.25;
-    video.playbackRate = newPlaybackRate;
-    speedBtn.textContent = `${newPlaybackRate}x`;
-}
 
-let prevUrl;
 function createVideoListElement(name, url) {
     const listElem = document.createElement("li");
     listElem.textContent = name;
@@ -465,9 +495,8 @@ function createVideoListElement(name, url) {
         queryParams.set("v", url);
         const newUrl = "?" + queryParams.toString();
         // Use pushState to update the URL without reloading the page
-        if (window.location.href !== prevUrl) {
+        if (window.location.search !== queryParams.toString()) {
             history.pushState({ path: newUrl }, "", newUrl);
-            prevUrl = window.location.href;
             videoDesc.textContent = name;
             video.setAttribute("src", `/video?v=${url}`);
         }
@@ -485,9 +514,16 @@ async function getVideoList() {
             (item) => item.url === videoParam
         );
         videoDesc.textContent = videoItem.name || "Error 404";
-        video.setAttribute("src", `/video?v=${videoParam}`);
-        //figure out quality .. any
+        if (qualityParam) {
+            video.setAttribute(
+                "src",
+                `/video?v=${videoParam}&q=${qualityParam}`
+            );
+        } else {
+            video.setAttribute("src", `/video?v=${videoParam}`);
+        }
     }
+    return result.videoNames;
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {

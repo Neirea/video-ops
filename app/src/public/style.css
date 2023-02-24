@@ -322,6 +322,25 @@ video::-webkit-media-controls-enclosure {
 .timeline-container:hover .timeline {
     height: 100%;
 }
+/* video quality */
+.quality-container {
+    position: relative;
+    width: 4rem;
+}
+.quality-list {
+    display: none;
+    position: absolute;
+    top: -6rem;
+    background-color: rgb(25, 25, 25, 0.2);
+    line-height: 1.5;
+}
+.quality-list li {
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+.quality-list li:hover {
+    background-color: rgb(175, 175, 175, 0.2);
+}
 
 /* video description */
 .video-desc {

@@ -24,6 +24,7 @@ const status720 = document.querySelector(".status-720"); //720p line
 const status1080 = document.querySelector(".status-1080"); //1080p line
 //video player
 const video = document.querySelector("video");
+const videoDesc = document.querySelector(".video-desc");
 const videoPlayer = document.querySelector(".video-player");
 const loadingIndicator = document.querySelector(".loading-indicator");
 const playPauseBtn = document.querySelector(".play-pause-btn");
@@ -51,6 +52,13 @@ getVideoList();
 
 appTitle.addEventListener("click", () => {
     window.location.href = "/";
+});
+// account for moving through history
+window.addEventListener("popstate", (e) => {
+    if (!window.location.search) {
+        videoDesc.textContent = "Default video";
+        video.setAttribute("src", "/video");
+    }
 });
 
 // keyboard events
@@ -463,7 +471,7 @@ function createVideoListElement(name, url) {
             history.pushState({ path: newUrl }, "", newUrl);
             prevUrl = window.location.href;
         }
-
+        videoDesc.textContent = name;
         video.setAttribute("src", `/video?v=${url}`);
     });
     videosList.prepend(listElem);

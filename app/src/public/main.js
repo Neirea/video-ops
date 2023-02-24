@@ -42,7 +42,7 @@ const videoParam = queryParams.get("v");
 const qualityParam = queryParams.get("q");
 
 if (videoParam) {
-    videoPlayer.setAttribute("src", `/video?v=${videoParam}`);
+    video.setAttribute("src", `/video?v=${videoParam}`);
     //figure out quality .. any
 }
 
@@ -366,7 +366,7 @@ btnUpload.addEventListener("click", () => {
                         resetUI();
                         statusMain.textContent = "Finished uploading";
                         // ADD LINK TO THE LIST OF VIDEOS
-                        createVideoListElement(msg, name);
+                        createVideoListElement(name, msg);
                         break;
                     default:
                         statusMain.textContent = msg;
@@ -452,11 +452,11 @@ function changePlaybackSpeed() {
 }
 
 let prevUrl;
-function createVideoListElement(link, name) {
+function createVideoListElement(name, url) {
     const listElem = document.createElement("li");
     listElem.textContent = name;
     listElem.addEventListener("click", () => {
-        queryParams.set("v", link);
+        queryParams.set("v", url);
         const newUrl = "?" + queryParams.toString();
         // Use pushState to update the URL without reloading the page
         if (window.location.href !== prevUrl) {
@@ -464,7 +464,7 @@ function createVideoListElement(link, name) {
             prevUrl = window.location.href;
         }
 
-        videoPlayer.setAttribute("src", `/video?v=${link}`);
+        video.setAttribute("src", `/video?v=${url}`);
     });
     videosList.prepend(listElem);
 }

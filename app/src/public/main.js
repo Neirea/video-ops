@@ -41,13 +41,12 @@ const resolutionBtn = document.querySelector(".resolution-btn");
 const qualityList = document.querySelector(".quality-list");
 
 let queryParams = new URLSearchParams(window.location.search);
-const videoParam = queryParams.get("v");
-const qualityParam = queryParams.get("q");
 
 // fetches list of videos
 const videos = getVideoList();
 let isScrubbing = false;
 let wasPaused;
+let prevVideo;
 
 // default video
 if (!window.location.search) videoDesc.textContent = "Default video";
@@ -58,7 +57,7 @@ appTitle.addEventListener("click", () => {
 window.addEventListener("popstate", async (e) => {
     queryParams = new URLSearchParams(window.location.search);
     const v = queryParams.get("v");
-    const q = queryParams.get("q");
+    const q = localStorage.getItem("quality");
     if (!v) {
         videoDesc.textContent = "Default video";
         video.setAttribute("src", "/video");
@@ -68,6 +67,7 @@ window.addEventListener("popstate", async (e) => {
         ).name;
         video.setAttribute("src", `/video?v=${v}`);
     } else {
+        videoPlayer.classList.add("paused");
         video.setAttribute("src", `/video?v=${v}&q=${q}`);
     }
 });
@@ -124,7 +124,7 @@ video.addEventListener("pause", () => {
     videoPlayer.classList.add("paused");
 });
 // volume
-video.volume = 0.5;
+video.volume = localStorage.getItem("volume") || 0.5;
 muteBtn.addEventListener("click", toggleMute);
 video.addEventListener("volumechange", () => {
     volumeSlider.value = video.volume;
@@ -138,15 +138,24 @@ video.addEventListener("volumechange", () => {
         volumeLevel = "low";
     }
     videoPlayer.dataset.volumeLevel = volumeLevel;
+    localStorage.setItem("volume", video.volume);
 });
 volumeSlider.addEventListener("input", (e) => {
     video.volume = e.target.value;
     video.muted = e.target.value === 0;
 });
 // duration
-video.addEventListener("loadeddata", () => {
+video.addEventListener("loadeddata", (e) => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
+    video.playbackRate = localStorage.getItem("speed") || 1;
+    speedBtn.textContent = `${video.playbackRate}x`;
+    //remove progress from new video
+    if (prevVideo !== queryParams.get("v")) {
+        timelineContainer.style.removeProperty("--progress-position");
+        currentTime.textContent = formatDuration(video.currentTime);
+        return;
+    }
     const percent = timelineContainer.style.getPropertyValue(
         "--progress-position"
     );
@@ -166,21 +175,24 @@ speedBtn.addEventListener("click", () => {
     if (newPlaybackRate > 2) newPlaybackRate = 0.25;
     video.playbackRate = newPlaybackRate;
     speedBtn.textContent = `${newPlaybackRate}x`;
+    localStorage.setItem("speed", newPlaybackRate);
 });
 resolutionBtn.addEventListener("click", (e) => {
-    qualityList.style.display = "block";
+    if (qualityList.style.display === "block") {
+        qualityList.style.display = "none";
+    } else {
+        qualityList.style.display = "block";
+    }
 });
 qualityList.addEventListener("click", (e) => {
     const quality = parseInt(e.target.textContent);
-    queryParams.set("q", quality);
-    const newUrl = "?" + queryParams.toString();
-    // Use pushState to update the URL without reloading the page
-    if (window.location.search !== queryParams.toString()) {
-        history.replaceState(null, null, newUrl);
-        wasPaused = video.paused;
-        video.setAttribute("src", `video${newUrl}`);
-        qualityList.style.display = "none";
-    }
+    localStorage.setItem("quality", quality);
+    const videoParam = queryParams.get("v");
+    const route = videoParam ? `video?v=${videoParam}&q=${quality}` : "video";
+    wasPaused = video.paused;
+    prevVideo = queryParams.get("v");
+    video.setAttribute("src", route);
+    qualityList.style.display = "none";
 });
 // full screen
 fullScreenBtn.addEventListener("click", () => {
@@ -498,6 +510,7 @@ function createVideoListElement(name, url) {
         if (window.location.search !== queryParams.toString()) {
             history.pushState({ path: newUrl }, "", newUrl);
             videoDesc.textContent = name;
+            videoPlayer.classList.add("paused");
             video.setAttribute("src", `/video?v=${url}`);
         }
     });
@@ -509,19 +522,14 @@ async function getVideoList() {
     result.videoNames.forEach((item) => {
         createVideoListElement(item.name, item.url);
     });
+    const videoParam = queryParams.get("v");
     if (videoParam) {
         const videoItem = result.videoNames.find(
             (item) => item.url === videoParam
         );
         videoDesc.textContent = videoItem.name || "Error 404";
-        if (qualityParam) {
-            video.setAttribute(
-                "src",
-                `/video?v=${videoParam}&q=${qualityParam}`
-            );
-        } else {
-            video.setAttribute("src", `/video?v=${videoParam}`);
-        }
+        const quality = localStorage.getItem("quality") || 1080;
+        video.setAttribute("src", `/video?v=${videoParam}&q=${quality}`);
     }
     return result.videoNames;
 }

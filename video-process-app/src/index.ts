@@ -171,8 +171,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
                     "-preset veryslow", //slower=>better quality
                     "-r 30", //fps 30
                     "-b:a 192k", //audio bitrate
-                    `-vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:-1:-1:color=black`, //pad with black bars
-                    "-vf colormatrix=bt470bg:bt709",
+                    `-vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,colormatrix=bt470bg:bt709`, //pad with black bars
                     "-color_range 1",
                     "-colorspace 1",
                     "-color_primaries 1",

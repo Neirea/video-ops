@@ -22,6 +22,7 @@ const status1080 = document.querySelector(".status-1080"); //1080p line
 //video player
 const video = document.querySelector("video");
 const videoPlayer = document.querySelector(".video-player");
+const loadingIndicator = document.querySelector(".loading-indicator");
 const playPauseBtn = document.querySelector(".play-pause-btn");
 const fullScreenBtn = document.querySelector(".full-screen-btn");
 const muteBtn = document.querySelector(".mute-btn");
@@ -61,6 +62,14 @@ document.addEventListener("keydown", (e) => {
             break;
     }
 });
+// loading state
+video.addEventListener("waiting", () => {
+    loadingIndicator.style.display = "block";
+});
+video.addEventListener("playing", () => {
+    loadingIndicator.style.display = "none";
+});
+
 // timeline
 timelineContainer.addEventListener("mousemove", handleTimelineUpdate);
 timelineContainer.addEventListener("mousedown", toggleScrubbing);
@@ -102,6 +111,7 @@ volumeSlider.addEventListener("input", (e) => {
 });
 // duration
 video.addEventListener("loadeddata", () => {
+    loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
 });
 video.addEventListener("timeupdate", () => {

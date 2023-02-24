@@ -85,7 +85,9 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         }
         sendTo(fileName, {
             status: "checked",
-            msg: `Video is valid with duration ${info.streams[0].duration}`,
+            msg: `Video is valid with duration ${Math.trunc(
+                info.streams[0].duration!
+            )}s`,
         });
     });
 

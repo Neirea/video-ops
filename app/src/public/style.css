@@ -400,6 +400,7 @@ video::-webkit-media-controls-enclosure {
 .status-video-details > li {
     --line-color-1: var(--status-inactive);
     --line-color-2: var(--status-inactive);
+    --line-color-3: var(--status-inactive);
     position: relative;
     margin: 0 auto;
     font-size: 12px;
@@ -450,18 +451,17 @@ video::-webkit-media-controls-enclosure {
     height: 2rem;
     width: 2rem;
     background-color: var(--circle-inactive);
-    z-index: 1;
 }
 
 .status-container > li > span.progress,
 .status-video-details > li > span.progress {
-    border: 0.125rem solid var(--status-active);
+    border-color: var(--status-active);
     background-color: transparent;
 }
 
 .status-container li > span.active,
 .status-video-details > li > span.active {
-    border: 0.125rem solid var(--status-active);
+    border-color: var(--status-active);
     background-color: var(--status-active);
     color: var(--left-color);
 }
@@ -475,15 +475,13 @@ video::-webkit-media-controls-enclosure {
 
 .status-video-details li > span.status-480::after {
     content: "";
-    width: 2.5rem;
+    width: 2.4rem;
     height: 0.125rem;
     background-color: var(--line-color-1);
     position: absolute;
     transform: rotate(-45deg);
-    top: -0.7rem;
-    left: 1.3rem;
-    right: 0;
-    bottom: 0;
+    top: -0.65rem;
+    left: 1.25rem;
 }
 
 .status-video-details li > span.status-720::after {
@@ -498,11 +496,11 @@ video::-webkit-media-controls-enclosure {
 
 .status-video-details li > span.status-1080::after {
     content: "";
-    width: 2.5rem;
+    width: 2.4rem;
     height: 0.125rem;
     background-color: var(--line-color-3);
     position: absolute;
     transform: rotate(45deg);
-    top: -0.7rem;
-    right: 1.3rem;
+    top: -0.65rem;
+    right: 1.25rem;
 }

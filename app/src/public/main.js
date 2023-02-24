@@ -37,7 +37,7 @@ const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
 const previewImg = document.querySelector(".preview-img");
 const thumbnailImg = document.querySelector(".thumbnail-img");
-const resolutionBtn = document.querySelector(".resolution-btn");
+const qualityBtn = document.querySelector(".quality-btn");
 const qualityList = document.querySelector(".quality-list");
 
 let queryParams = new URLSearchParams(window.location.search);
@@ -48,7 +48,11 @@ let isScrubbing = false;
 let wasPaused;
 let prevVideo;
 
-// default video
+// default
+if (localStorage.getItem("quality") == null) {
+    localStorage.setItem("quality", "1080p");
+}
+qualityBtn.textContent = localStorage.getItem("quality") + "p";
 if (!window.location.search) queryParams.set("v", "test");
 appTitle.addEventListener("click", () => {
     window.location.href = "/";
@@ -180,7 +184,7 @@ speedBtn.addEventListener("click", () => {
     speedBtn.textContent = `${newPlaybackRate}x`;
     localStorage.setItem("speed", newPlaybackRate);
 });
-resolutionBtn.addEventListener("click", (e) => {
+qualityBtn.addEventListener("click", (e) => {
     if (qualityList.style.display === "block") {
         qualityList.style.display = "none";
     } else {
@@ -190,6 +194,7 @@ resolutionBtn.addEventListener("click", (e) => {
 qualityList.addEventListener("click", (e) => {
     const quality = parseInt(e.target.textContent);
     localStorage.setItem("quality", quality);
+    qualityBtn.textContent = quality + "p";
     const videoParam = queryParams.get("v");
     const route = videoParam ? `video?v=${videoParam}&q=${quality}` : "video";
     wasPaused = video.paused;
@@ -528,12 +533,14 @@ async function getVideoList() {
     });
     const videoParam = queryParams.get("v");
     if (videoParam) {
-        const videoItem = items.find((item) => item.url === videoParam);
+        const videoItem = result.videoNames.find(
+            (item) => item.url === videoParam
+        );
         videoDesc.textContent = videoItem.name || "Error 404";
         const quality = localStorage.getItem("quality") || 1080;
         video.setAttribute("src", `/video?v=${videoParam}&q=${quality}`);
     }
-    return videoNames;
+    return result.videoNames;
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {

@@ -75,14 +75,26 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const urlName = fileName.split(".")[0];
     //get file out of storage
     const tmpInputFile = `input-${fileName}`;
-    await bucket_raw.file(fileName).download({ destination: tmpInputFile });
+    const file = bucket_raw.file(fileName);
+    //check file size
+    const metadata = await file.getMetadata();
+    if (metadata[0].size > 2 * 10 ** 9) {
+        sendTo(fileName, {
+            status: "error",
+            msg: "File is too big",
+        });
+        await file.delete();
+        return;
+    }
+    await file.download({ destination: tmpInputFile });
 
     //check if input file is video file
     let isError = false;
-    ffprobe(tmpInputFile, { path: ffprobeStatic.path }, function (err, info) {
+    ffprobe(tmpInputFile, { path: ffprobeStatic.path }, async (err, info) => {
         if (err) {
             sendTo(fileName, { status: "error", msg: err.message });
             isError = true;
+            await file.delete();
             return;
         }
         sendTo(fileName, {
@@ -152,7 +164,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     } finally {
         //delete junk
         fs.unlink(tmpInputFile);
-        await bucket_raw.file(fileName).delete();
+        await file.delete();
     }
 
     function ffmpegCommand(input: string, height: number) {

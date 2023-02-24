@@ -10,5 +10,12 @@ Users can watch them in custom-made player.
 1.  Videos is uploaded by using password token
 2.  Raw video gets uploaded to Google Cloud Storage (GCP) bucket via multipart upload.
 3.  GCP upload triggers Google Pub/sub which pushes notification to transcoding server.
-4.  Video gets transcoded into all set qualities and saved to production bucket and database(MongoDB).
+4.  Video gets transcoded by ffmpeg into all set qualities and saved to production bucket and database.
 5.  App consumes these videos via streaming.
+
+## Technologies
+
+-   Frontend is vanilla html, css and javascript
+-   Server-side: Node.js (express), ffmpeg, MongoDB
+-   Google Cloud Storage and Pub/Sub
+-   Deployed on Railway

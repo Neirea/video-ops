@@ -210,10 +210,10 @@ fullScreenBtn.addEventListener("click", () => {
     }
     if (videoPlayer.requestFullscreen) {
         videoPlayer.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) {
+    } else if (videoPlayer.webkitRequestFullscreen) {
         /* Safari */
         videoPlayer.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) {
+    } else if (videoPlayer.msRequestFullscreen) {
         /* IE11 */
         videoPlayer.msRequestFullscreen();
     }

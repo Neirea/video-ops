@@ -1,7 +1,7 @@
-# Video uploader & streaming
+# Video Ops
 
 This is project for uploading video files, processing them into 480p, 720p and 1080p.  
-Users can watch them in custom-made player.
+After that, you can watch them in custom-made player.
 
 -   To set up CORS in <b>GCP CLI</b>: gsutil cors set cors.json gs://\<bucket name\>
 

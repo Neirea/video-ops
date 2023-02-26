@@ -46,14 +46,21 @@ const app = express();
 mongoose.set("strictQuery", false);
 mongoose.connect(process.env.MONGO_URL!);
 
+const prodURL = process.env.RAILWAY_STATIC_URL;
+
 app.use(
     helmet({
         contentSecurityPolicy: {
             directives: {
                 "connect-src": [
-                    process.env.RAILWAY_STATIC_URL || "http://localhost:5000",
+                    prodURL || "http://localhost:5000",
                     process.env.WS_URL || "ws://localhost:8080",
                     `https://${process.env.GCP_RAW_BUCKET}.storage.googleapis.com`,
+                ],
+                "img-src": [
+                    "self",
+                    prodURL || "http://localhost:5000",
+                    "blob:",
                 ],
             },
         },
@@ -199,8 +206,20 @@ app.get("/video", async (req, res) => {
     videoStream.pipe(res);
 });
 
+app.get("/image", async (req, res) => {
+    const imgName = req.query.img as string;
+    const file = storage
+        .bucket(process.env.GCP_PROD_BUCKET!)
+        .file(imgName + ".webp");
+    const metadata = await file.getMetadata();
+    if (!metadata) throw new CustomError("Content Not Found", 404);
+    const imageStream = file.createReadStream();
+    res.setHeader("Content-Type", "image/webp");
+    imageStream.pipe(res);
+});
+
 app.get("/videos", async (req, res) => {
-    const videoNames = await Video.find({}).select({ name: 1, url: 1, _id: 0 });
+    const videoNames = await Video.find({});
     res.json({ videoNames });
 });
 

@@ -44,6 +44,7 @@ let queryParams = new URLSearchParams(window.location.search);
 
 // fetches list of videos
 const videos = getVideoList();
+let thumbnails = []; //list of thumbnail preview images
 let isScrubbing = false;
 let wasPaused;
 let prevVideo;
@@ -60,15 +61,14 @@ appTitle.addEventListener("click", () => {
 // account for moving through history
 window.addEventListener("popstate", async (e) => {
     queryParams = new URLSearchParams(window.location.search);
-    const v = queryParams.get("v");
+    const v = queryParams.get("v") || "test";
     const q = localStorage.getItem("quality");
-    if (!v) {
-        videoDesc.textContent = "Default video";
-        video.setAttribute("src", "/video");
-    } else if (!q) {
-        videoDesc.textContent = (await videos).find(
-            (item) => item.url === v
-        ).name;
+    deleteImages();
+    getThumbnails(v);
+    if (!q) {
+        videoDesc.textContent =
+            (await videos).find((item) => item.url === v).name ||
+            "Default video";
         video.setAttribute("src", `/video?v=${v}`);
     } else {
         videoPlayer.classList.add("paused");
@@ -466,17 +466,14 @@ function handleTimelineUpdate(e) {
     const rect = timelineContainer.getBoundingClientRect();
     const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
-    // const previewImgNumber = Math.max(
-    //     1,
-    //     Math.floor((percent * video.duration) / 10)
-    // );
-    // const previewImgSrc = `assets/previewImgs/preview${previewImgNumber}.jpg`;
-    // previewImg.src = previewImgSrc;
+    //thumbnail image
+    const previewImgSrc = thumbnails[Math.floor(percent * 100)] || "";
+    previewImg.src = previewImgSrc;
     timelineContainer.style.setProperty("--preview-position", percent);
 
     if (isScrubbing) {
         e.preventDefault();
-        // thumbnailImg.src = previewImgSrc;
+        thumbnailImg.src = previewImgSrc;
         timelineContainer.style.setProperty("--progress-position", percent);
     }
 }
@@ -519,7 +516,10 @@ function createVideoListElement(name, url) {
             history.pushState({ path: newUrl }, "", newUrl);
             videoDesc.textContent = name;
             videoPlayer.classList.add("paused");
-            video.setAttribute("src", `/video?v=${url}`);
+            const quality = localStorage.getItem("q");
+            video.setAttribute("src", `/video?v=${url}&q=${quality}`);
+            deleteImages();
+            getThumbnails(v);
         }
     });
     videosList.prepend(listElem);
@@ -539,6 +539,7 @@ async function getVideoList() {
         videoDesc.textContent = videoItem.name || "Error 404";
         const quality = localStorage.getItem("quality") || 1080;
         video.setAttribute("src", `/video?v=${videoParam}&q=${quality}`);
+        getThumbnails(videoParam);
     }
     return result.videoNames;
 }
@@ -575,6 +576,75 @@ function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
             reject(new Error("Upload cancelled by user"));
         };
         xhr.send(body);
+    });
+}
+function getThumbnails(imgName) {
+    fetch(`/image?img=${imgName}`)
+        .then((res) => res.blob())
+        .then((blob) => URL.createObjectURL(blob))
+        .then((thumbnailCollage) => {
+            //get images for preview
+            deriveImages(thumbnailCollage).then((res) => {
+                thumbnails = res;
+            });
+        });
+}
+
+function deriveImages(source) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const thumbnailCollage = new Image();
+    thumbnailCollage.src = source;
+    return new Promise((resolve, reject) => {
+        thumbnailCollage.onload = function () {
+            canvas.width = thumbnailCollage.width;
+            canvas.height = thumbnailCollage.height;
+
+            // draw the thumbnail collage on the canvas
+            context.drawImage(thumbnailCollage, 0, 0);
+
+            // loop through each thumbnail in the collage and extract it
+            const thumbnailWidth = 128;
+            const thumbnailHeight = 72;
+            const numThumbnails = 100; // set the number of thumbnails in the collage
+            const thumbnails = [];
+            // tmp canvas to put ImageData derived from main canvas
+            const tmpCanvas = document.createElement("canvas");
+            const tmoContext = tmpCanvas.getContext("2d");
+            tmpCanvas.width = thumbnailWidth;
+            tmpCanvas.height = thumbnailHeight;
+            for (let i = 0; i < numThumbnails; i++) {
+                // calculate the position of the current thumbnail in the collage
+                const x = (i % 10) * thumbnailWidth;
+                const y = Math.floor(i / 10) * thumbnailHeight;
+
+                // extract the current thumbnail from the canvas
+                const thumbnail = context.getImageData(
+                    x,
+                    y,
+                    thumbnailWidth,
+                    thumbnailHeight
+                );
+                tmoContext.putImageData(thumbnail, 0, 0);
+                tmpCanvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    thumbnails.push(url);
+                });
+            }
+            //remove source
+            tmpCanvas.remove();
+            canvas.remove();
+            URL.revokeObjectURL(source);
+            //resolve blob urls of images
+            resolve(thumbnails);
+        };
+        thumbnailCollage.onerror = reject;
+    });
+}
+function deleteImages() {
+    if (!thumbnails) return;
+    thumbnails.forEach((url) => {
+        URL.revokeObjectURL(url);
     });
 }
 

@@ -498,7 +498,15 @@ function handleTimelineUpdate(e) {
     //thumbnail image
     const previewImgSrc = thumbnails[Math.floor(percent * 100)] || "";
     previewImg.src = previewImgSrc;
-    timelineContainer.style.setProperty("--preview-position", percent);
+    const previewX =
+        e.x + previewImg.offsetWidth / 2 > rect.right
+            ? rect.right - previewImg.offsetWidth / 2
+            : e.x - previewImg.offsetWidth / 2 < rect.left
+            ? rect.left + previewImg.offsetWidth / 2
+            : e.x;
+    const previewPercent =
+        Math.min(Math.max(0, previewX - rect.x), rect.width) / rect.width;
+    timelineContainer.style.setProperty("--preview-position", previewPercent);
 
     if (isScrubbing) {
         e.preventDefault();

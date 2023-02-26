@@ -314,7 +314,7 @@ video::-webkit-media-controls-enclosure {
 }
 .timeline .preview-img {
     position: absolute;
-    height: 80px;
+    height: 5rem;
     aspect-ratio: 16 / 9;
     top: -1rem;
     transform: translate(-50%, -100%);

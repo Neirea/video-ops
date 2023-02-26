@@ -166,7 +166,7 @@ app.post("/complete-upload", limiter, async (req, res) => {
 });
 
 app.get("/video", async (req, res) => {
-    const queryVideo = (req.query.v as string) || "test";
+    const queryVideo = req.query.v as string;
     const queryQuality = req.query.q as string;
     const videoName = queryQuality
         ? `${queryVideo}_${queryQuality}.mp4`

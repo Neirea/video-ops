@@ -47,32 +47,28 @@ const videos = getVideoList();
 let thumbnails = []; //list of thumbnail preview images
 let isScrubbing = false;
 let wasPaused;
-let prevVideo;
+let prevVideo; //used to continue playing video if only quality changes
 
-// default
-if (localStorage.getItem("quality") == null) {
-    localStorage.setItem("quality", "1080");
-}
-qualityBtn.textContent = localStorage.getItem("quality") + "p";
-if (!window.location.search) queryParams.set("v", "test");
+//default parameters
+setDefault();
+
+// click on title -> go home page
 appTitle.addEventListener("click", () => {
     window.location.href = "/";
 });
 // account for moving through history
 window.addEventListener("popstate", async (e) => {
     queryParams = new URLSearchParams(window.location.search);
-    const v = queryParams.get("v") || "test";
-    const q = localStorage.getItem("quality");
+    const v = queryParams.get("v");
+    const q = localStorage.getItem("quality") || 1080;
     deleteImages();
     getThumbnails(v);
     if (!q) {
-        videoDesc.textContent =
-            (await videos).find((item) => item.url === v).name ||
-            "Default video";
-        video.setAttribute("src", `/video?v=${v}`);
+        videoDesc.textContent = await getVideoTitle(videos, v);
+        video.src = `/video?v=${v}`;
     } else {
         videoPlayer.classList.add("paused");
-        video.setAttribute("src", `/video?v=${v}&q=${q}`);
+        video.src = `/video?v=${v}&q=${q}`;
     }
 });
 
@@ -118,7 +114,7 @@ document.addEventListener("mouseup", (e) => {
 document.addEventListener("mousemove", (e) => {
     if (isScrubbing) handleTimelineUpdate(e);
 });
-// play video events
+// play/pause video
 playPauseBtn.addEventListener("click", togglePlay);
 video.addEventListener("click", togglePlay);
 video.addEventListener("play", () => {
@@ -128,7 +124,6 @@ video.addEventListener("pause", () => {
     videoPlayer.classList.add("paused");
 });
 // volume
-video.volume = localStorage.getItem("volume") || 0.5;
 muteBtn.addEventListener("click", toggleMute);
 video.addEventListener("volumechange", () => {
     volumeSlider.value = video.volume;
@@ -184,6 +179,7 @@ speedBtn.addEventListener("click", () => {
     speedBtn.textContent = `${newPlaybackRate}x`;
     localStorage.setItem("speed", newPlaybackRate);
 });
+// quality
 qualityBtn.addEventListener("click", (e) => {
     if (qualityList.style.display === "block") {
         qualityList.style.display = "none";
@@ -196,10 +192,10 @@ qualityList.addEventListener("click", (e) => {
     localStorage.setItem("quality", quality);
     qualityBtn.textContent = quality + "p";
     const videoParam = queryParams.get("v");
-    const route = videoParam ? `video?v=${videoParam}&q=${quality}` : "video";
+    const videoSrc = `video?v=${videoParam}&q=${quality}`;
     wasPaused = video.paused;
-    prevVideo = queryParams.get("v");
-    video.setAttribute("src", route);
+    prevVideo = videoParam;
+    video.src = videoSrc;
     qualityList.style.display = "none";
 });
 // full screen
@@ -445,6 +441,39 @@ btnUpload.addEventListener("click", () => {
     fileReader.readAsArrayBuffer(theFile);
 });
 
+async function setDefault() {
+    // default
+    if (localStorage.getItem("quality") == null) {
+        localStorage.setItem("quality", "1080");
+    }
+    if (!queryParams.get("v")) {
+        queryParams.set("v", "default");
+        history.replaceState(null, null, "?v=default");
+    }
+    const videoUrl = queryParams.get("v");
+    const quality = localStorage.getItem("quality");
+    qualityBtn.textContent = quality + "p";
+    video.src = `/video?v=${videoUrl}&q=${quality}`;
+    videoDesc.textContent = await getVideoTitle(videos, videoUrl);
+    getThumbnails(videoUrl);
+    // volume
+    video.volume = localStorage.getItem("volume") || 0.5;
+}
+
+async function getVideoList() {
+    const result = await fetch("/videos").then((res) => res.json());
+    result.videoNames.forEach((item) => {
+        createVideoListElement(item.name, item.url);
+    });
+    return result.videoNames;
+}
+async function getVideoTitle(videos, urlName) {
+    return (
+        (await videos).find((item) => item.url === urlName).name ||
+        "Default video"
+    );
+}
+
 //timeline
 function toggleScrubbing(e) {
     const rect = timelineContainer.getBoundingClientRect();
@@ -516,32 +545,13 @@ function createVideoListElement(name, url) {
             history.pushState({ path: newUrl }, "", newUrl);
             videoDesc.textContent = name;
             videoPlayer.classList.add("paused");
-            const quality = localStorage.getItem("q");
-            video.setAttribute("src", `/video?v=${url}&q=${quality}`);
+            const quality = localStorage.getItem("quality") || 1080;
             deleteImages();
-            getThumbnails(v);
+            getThumbnails(url);
+            video.src = `/video?v=${url}&q=${quality}`;
         }
     });
     videosList.prepend(listElem);
-}
-
-async function getVideoList() {
-    const result = await fetch("/videos").then((res) => res.json());
-    result.videoNames.push({ name: "Default video", url: "test" });
-    result.videoNames.forEach((item) => {
-        createVideoListElement(item.name, item.url);
-    });
-    const videoParam = queryParams.get("v");
-    if (videoParam) {
-        const videoItem = result.videoNames.find(
-            (item) => item.url === videoParam
-        );
-        videoDesc.textContent = videoItem.name || "Error 404";
-        const quality = localStorage.getItem("quality") || 1080;
-        video.setAttribute("src", `/video?v=${videoParam}&q=${quality}`);
-        getThumbnails(videoParam);
-    }
-    return result.videoNames;
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
@@ -592,7 +602,7 @@ function getThumbnails(imgName) {
 
 function deriveImages(source) {
     const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
     const thumbnailCollage = new Image();
     thumbnailCollage.src = source;
     return new Promise((resolve, reject) => {
@@ -646,6 +656,10 @@ function deleteImages() {
     thumbnails.forEach((url) => {
         URL.revokeObjectURL(url);
     });
+    //empty array
+    while (thumbnails.length > 0) {
+        thumbnails.pop();
+    }
 }
 
 function resetUI(error) {

@@ -74,7 +74,6 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const fileName: string = data.name;
     const urlName = fileName.split(".")[0];
     //get file out of storage
-    const tmpInputFile = `input-${fileName}`;
     const file = bucket_raw.file(fileName);
     //check file size
     const metadata = await file.getMetadata();
@@ -86,22 +85,35 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         await file.delete();
         return;
     }
-    await file.download({ destination: tmpInputFile });
+    await file.download({ destination: urlName });
 
     //check if input file is video file
     let isError = false;
-    ffprobe(tmpInputFile, { path: ffprobeStatic.path }, async (err, info) => {
-        if (err) {
-            sendTo(fileName, { status: "error", msg: err.message });
+    const commandsBatch = [];
+
+    ffprobe(urlName, { path: ffprobeStatic.path }, async (err, info) => {
+        const duration = info.streams[0].duration;
+        if (err || !duration) {
+            sendTo(fileName, {
+                status: "error",
+                msg: err.message || "Probe Error",
+            });
             isError = true;
             await file.delete();
             return;
         }
+        commandsBatch.push(
+            ffmpegScrn(urlName, duration).then((res) => {
+                sendTo(fileName, {
+                    status: "checked",
+                    msg: "Thumbnails are generated",
+                });
+                return res;
+            })
+        );
         sendTo(fileName, {
             status: "checked",
-            msg: `Video is valid with duration ${Math.trunc(
-                info.streams[0].duration!
-            )}s`,
+            msg: `Video is valid with duration ${Math.trunc(duration)}s`,
         });
     });
 
@@ -112,10 +124,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     const height1080 = 1080;
 
     //process files
-    const commandsBatch = [];
-
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, height480).then((res) => {
+        ffmpegCommand(urlName, height480).then((res) => {
             sendTo(fileName, {
                 status: "processed",
                 msg: `${height480}p`,
@@ -124,7 +134,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         })
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, height720).then((res) => {
+        ffmpegCommand(urlName, height720).then((res) => {
             sendTo(fileName, {
                 status: "processed",
                 msg: `${height720}p`,
@@ -133,7 +143,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         })
     );
     commandsBatch.push(
-        ffmpegCommand(tmpInputFile, height1080).then((res) => {
+        ffmpegCommand(urlName, height1080).then((res) => {
             sendTo(fileName, {
                 status: "processed",
                 msg: `${height1080}p`,
@@ -163,50 +173,8 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         });
     } finally {
         //delete junk
-        fs.unlink(tmpInputFile);
+        fs.unlink(urlName);
         await file.delete();
-    }
-
-    function ffmpegCommand(input: string, height: number) {
-        const width = Math.ceil((height / 9) * 16);
-        const outputFileName = `${urlName}_${height}.mp4`;
-        const outputTmp = "tmp-" + outputFileName;
-        const outputStream = bucket_prod
-            .file(outputFileName)
-            .createWriteStream();
-
-        return new Promise((resolve, reject) => {
-            ffmpeg(input)
-                .setFfmpegPath(ffmpegPath)
-                .outputOptions([
-                    "-c:v libx264",
-                    "-preset veryslow", //slower=>better quality
-                    "-r 30", //fps 30
-                    "-b:a 192k", //audio bitrate
-                    `-vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,colormatrix=bt470bg:bt709`, //pad with black bars
-                    "-color_range 1",
-                    "-colorspace 1",
-                    "-color_primaries 1",
-                    "-color_trc 1",
-                    "-movflags +faststart", //pushes info to beginning
-                    "-crf 28", //scale bitrate dynamically
-                ])
-                .output(outputTmp)
-                .on("end", async () => {
-                    //upload to google cloud storage
-                    createReadStream(outputTmp)
-                        .pipe(outputStream)
-                        .on("finish", () => {
-                            //delete output after upload
-                            fs.unlink(outputTmp);
-                            resolve(outputFileName);
-                        });
-                })
-                .on("error", (err) => {
-                    reject(err.message);
-                })
-                .run();
-        });
     }
 });
 
@@ -218,3 +186,73 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`server is running on port ${PORT}...`);
 });
+
+function ffmpegCommand(input: string, height: number) {
+    const width = Math.ceil((height / 9) * 16);
+    const outputFileName = `${input}_${height}.mp4`;
+    const outputTmp = "tmp-" + outputFileName;
+    const outputStream = bucket_prod.file(outputFileName).createWriteStream();
+
+    return new Promise((resolve, reject) => {
+        ffmpeg(input)
+            .setFfmpegPath(ffmpegPath)
+            .outputOptions([
+                "-c:v libx264",
+                "-preset veryslow", //slower=>better quality
+                "-r 30", //fps 30
+                "-b:a 192k", //audio bitrate
+                `-vf scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,colormatrix=bt470bg:bt709`, //pad with black bars
+                "-color_range 1",
+                "-colorspace 1",
+                "-color_primaries 1",
+                "-color_trc 1",
+                "-movflags +faststart", //pushes info to beginning
+                "-crf 28", //scale bitrate dynamically
+            ])
+            .output(outputTmp)
+            .on("end", async () => {
+                //upload to google cloud storage
+                createReadStream(outputTmp)
+                    .pipe(outputStream)
+                    .on("finish", () => {
+                        //delete output after upload
+                        fs.unlink(outputTmp);
+                        resolve(outputFileName);
+                    });
+            })
+            .on("error", (err) => {
+                reject(err.message);
+            })
+            .run();
+    });
+}
+
+function ffmpegScrn(input: string, duration: number) {
+    const outputFileName = `${input.split(".")[0]}.webp`;
+    const frameInterval = duration / 100;
+    const outputStream = bucket_prod.file(outputFileName).createWriteStream();
+
+    return new Promise((resolve, reject) => {
+        ffmpeg(input)
+            .setFfmpegPath(ffmpegPath)
+            .outputOptions([
+                `-vf fps=1/${frameInterval},scale=128:72:force_original_aspect_ratio=decrease,pad=128:72:-1:-1:color=black,tile=10x10`,
+                "-frames:v 1",
+                "-q:v 50",
+            ])
+            .output(outputFileName)
+            .on("end", async () => {
+                createReadStream(outputFileName)
+                    .pipe(outputStream)
+                    .on("finish", () => {
+                        //delete output after upload
+                        fs.unlink(outputFileName);
+                        resolve(outputFileName);
+                    });
+            })
+            .on("error", (err) => {
+                reject(err.message);
+            })
+            .run();
+    });
+}

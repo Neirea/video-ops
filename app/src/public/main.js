@@ -496,7 +496,8 @@ function handleTimelineUpdate(e) {
     const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
     //thumbnail image
-    const previewImgSrc = thumbnails[Math.floor(percent * 100)] || "";
+    const previewImgSrc = thumbnails[Math.floor(percent * 100)];
+    previewImg.style.display = previewImgSrc ? "block" : "none"; // don't show if not loaded yet
     previewImg.src = previewImgSrc;
     const previewX =
         e.x + previewImg.offsetWidth / 2 > rect.right

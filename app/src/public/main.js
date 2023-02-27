@@ -39,6 +39,8 @@ const previewImg = document.querySelector(".preview-img");
 const thumbnailImg = document.querySelector(".thumbnail-img");
 const qualityBtn = document.querySelector(".quality-btn");
 const qualityList = document.querySelector(".quality-list");
+const openFullScreenElem = document.querySelector(".open");
+const closeFullScreenElem = document.querySelector(".close");
 
 let queryParams = new URLSearchParams(window.location.search);
 
@@ -204,10 +206,17 @@ fullScreenBtn.addEventListener("click", () => {
         document.exitFullscreen();
         return;
     }
+    if (document.webkitCurrentFullScreenElement == videoPlayer) {
+        openFullScreenElem.style.display = "block";
+        closeFullScreenElem.style.display = "none";
+        return;
+    }
     if (videoPlayer.requestFullscreen) {
         videoPlayer.requestFullscreen();
     } else if (videoPlayer.webkitRequestFullscreen) {
         /* Safari */
+        openFullScreenElem.style.display = "none";
+        closeFullScreenElem.style.display = "block";
         videoPlayer.webkitRequestFullscreen();
     } else if (videoPlayer.msRequestFullscreen) {
         /* IE11 */

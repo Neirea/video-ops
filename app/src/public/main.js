@@ -147,7 +147,7 @@ volumeSlider.addEventListener("input", (e) => {
     video.muted = e.target.value === 0;
 });
 // duration
-video.addEventListener("loadeddata", (e) => {
+video.addEventListener("loadeddata", async () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
     video.playbackRate = localStorage.getItem("speed") || 1;
@@ -162,7 +162,7 @@ video.addEventListener("loadeddata", (e) => {
         "--progress-position"
     );
     video.currentTime = percent * video.duration;
-    if (wasPaused === false) video.play();
+    if (wasPaused === false) await video.play();
 });
 video.addEventListener("timeupdate", () => {
     if (video.duration) {
@@ -475,7 +475,7 @@ async function getVideoTitle(videos, urlName) {
 }
 
 //timeline
-function toggleScrubbing(e) {
+async function toggleScrubbing(e) {
     const rect = timelineContainer.getBoundingClientRect();
     const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
@@ -486,7 +486,7 @@ function toggleScrubbing(e) {
         video.pause();
     } else {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) video.play();
+        if (!wasPaused) await video.play();
     }
 
     handleTimelineUpdate(e);
@@ -497,7 +497,7 @@ function handleTimelineUpdate(e) {
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
     //thumbnail image
     const previewImgSrc = thumbnails[Math.floor(percent * 100)];
-    previewImg.src = previewImgSrc;
+    if (previewImgSrc) previewImg.src = previewImgSrc;
     const previewX =
         e.x + previewImg.offsetWidth / 2 > rect.right
             ? rect.right - previewImg.offsetWidth / 2
@@ -510,13 +510,13 @@ function handleTimelineUpdate(e) {
 
     if (isScrubbing) {
         e.preventDefault();
-        thumbnailImg.src = previewImgSrc;
+        if (previewImgSrc) thumbnailImg.src = previewImgSrc;
         timelineContainer.style.setProperty("--progress-position", percent);
     }
 }
 
-function togglePlay() {
-    video.paused ? video.play() : video.pause();
+async function togglePlay() {
+    video.paused ? await video.play() : video.pause();
 }
 
 function toggleMute() {
@@ -613,8 +613,17 @@ function deriveImages(source) {
     const context = canvas.getContext("2d", { willReadFrequently: true });
     const thumbnailCollage = new Image();
     thumbnailCollage.src = source;
+
+    function getCanvasBlobUrl(canvas) {
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                resolve(url);
+            });
+        });
+    }
     return new Promise((resolve, reject) => {
-        thumbnailCollage.onload = function () {
+        thumbnailCollage.onload = async function () {
             canvas.width = thumbnailCollage.width;
             canvas.height = thumbnailCollage.height;
 
@@ -644,11 +653,10 @@ function deriveImages(source) {
                     thumbnailHeight
                 );
                 tmoContext.putImageData(thumbnail, 0, 0);
-                tmpCanvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    thumbnails.push(url);
-                });
+                const url = await getCanvasBlobUrl(tmpCanvas);
+                thumbnails.push(url);
             }
+
             //remove source
             tmpCanvas.remove();
             canvas.remove();
@@ -659,6 +667,7 @@ function deriveImages(source) {
         thumbnailCollage.onerror = reject;
     });
 }
+
 function deleteImages() {
     if (!thumbnails) return;
     thumbnails.forEach((url) => {

@@ -182,10 +182,12 @@ app.get("/video", async (req, res) => {
     const videoSize = metadata[0].size;
 
     // Parse Range
-    // Example: "bytes=32324-"
-    const CHUNK_SIZE = 3 * 10 ** 6; // 3MB
-    const start = Number(range.replace(/\D/g, ""));
-    const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+    // Example: "bytes=0-1" or "bytes=0-"
+    const CHUNK_SIZE = 3 * 10 ** 6; // 3MB if end is not specified
+    const parts = range.replace("bytes=", "").split("-");
+    const start = parseInt(parts[0]);
+    const end =
+        parseInt(parts[1]) || Math.min(start + CHUNK_SIZE, videoSize - 1);
 
     // Create headers
     const contentLength = end - start + 1;

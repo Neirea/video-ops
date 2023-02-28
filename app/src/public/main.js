@@ -203,22 +203,36 @@ qualityList.addEventListener("click", (e) => {
 });
 // full screen
 fullScreenBtn.addEventListener("click", () => {
+    // Exit full screen
     if (document.fullscreenElement == videoPlayer) {
         document.exitFullscreen();
         return;
     }
+    /* IOS */
     if (document.webkitCurrentFullScreenElement == videoPlayer) {
         openFullScreenElem.style.display = "block";
         closeFullScreenElem.style.display = "none";
+        document.webkitCancelFullScreen();
         return;
     }
+    if (document.webkitFullscreenElement == videoPlayer) {
+        openFullScreenElem.style.display = "block";
+        closeFullScreenElem.style.display = "none";
+        document.webkitExitFullscreen();
+        return;
+    }
+    // Enter Full screen
     if (videoPlayer.requestFullscreen) {
         videoPlayer.requestFullscreen();
     } else if (videoPlayer.webkitRequestFullscreen) {
-        /* Safari */
+        /* IOS */
         openFullScreenElem.style.display = "none";
         closeFullScreenElem.style.display = "block";
         videoPlayer.webkitRequestFullscreen();
+    } else if (videoPlayer.webkitEnterFullscreen) {
+        openFullScreenElem.style.display = "none";
+        closeFullScreenElem.style.display = "block";
+        videoPlayer.webkitEnterFullscreen();
     } else if (videoPlayer.msRequestFullscreen) {
         /* IE11 */
         videoPlayer.msRequestFullscreen();

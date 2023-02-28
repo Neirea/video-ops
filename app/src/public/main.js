@@ -110,6 +110,7 @@ video.addEventListener("playing", () => {
 // timeline
 timelineContainer.addEventListener("mousemove", handleTimelineUpdate);
 timelineContainer.addEventListener("mousedown", toggleScrubbing);
+timelineContainer.addEventListener("touchstart", handleTouchStartScrubbing);
 document.addEventListener("mouseup", (e) => {
     if (isScrubbing) toggleScrubbing(e);
 });
@@ -500,25 +501,53 @@ async function toggleScrubbing(e) {
 
     handleTimelineUpdate(e);
 }
-function handleTimelineUpdate(e) {
+async function handleTouchStartScrubbing(e) {
+    if (e.targetTouches.length > 1) return;
     const rect = timelineContainer.getBoundingClientRect();
-    const percent =
-        Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
+    let percent =
+        Math.min(Math.max(0, e.targetTouches[0].pageX - rect.x), rect.width) /
+        rect.width;
+    videoPlayer.classList.add("scrubbing");
+    isScrubbing = true;
+
+    document.ontouchmove = function (e) {
+        percent =
+            Math.min(
+                Math.max(0, e.targetTouches[0].pageX - rect.x),
+                rect.width
+            ) / rect.width;
+        wasPaused = video.paused;
+        video.pause();
+
+        handleTimelineUpdate(e);
+    };
+
+    document.ontouchend = document.ontouchcancel = async function () {
+        video.currentTime = percent * video.duration;
+        if (!wasPaused) await video.play();
+        videoPlayer.classList.remove("scrubbing");
+        isScrubbing = false;
+    };
+}
+function handleTimelineUpdate(e) {
+    const x = e.x || e.targetTouches[0].pageX;
+    const rect = timelineContainer.getBoundingClientRect();
+    const percent = Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
     //thumbnail image
     const previewImgSrc = thumbnails[Math.floor(percent * 100)];
     if (previewImgSrc) previewImg.src = previewImgSrc;
     const previewX =
-        e.x + previewImg.offsetWidth / 2 > rect.right
+        x + previewImg.offsetWidth / 2 > rect.right
             ? rect.right - previewImg.offsetWidth / 2
-            : e.x - previewImg.offsetWidth / 2 < rect.left
+            : x - previewImg.offsetWidth / 2 < rect.left
             ? rect.left + previewImg.offsetWidth / 2
-            : e.x;
+            : x;
     const previewPercent =
         Math.min(Math.max(0, previewX - rect.x), rect.width) / rect.width;
     timelineContainer.style.setProperty("--preview-position", previewPercent);
 
     if (isScrubbing) {
-        e.preventDefault();
+        if (e.x) e.preventDefault();
         if (previewImgSrc) thumbnailImg.src = previewImgSrc;
         timelineContainer.style.setProperty("--progress-position", percent);
     }

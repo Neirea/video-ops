@@ -35,6 +35,7 @@ const currentTime = document.querySelector(".current-time");
 const totalTime = document.querySelector(".total-time");
 const speedBtn = document.querySelector(".speed-btn");
 const timelineContainer = document.querySelector(".timeline-container");
+const bufferedSegment = document.querySelector(".buffered-segment");
 const previewImg = document.querySelector(".preview-img");
 const thumbnailImg = document.querySelector(".thumbnail-img");
 const qualityBtn = document.querySelector(".quality-btn");
@@ -101,7 +102,7 @@ document.addEventListener("keydown", (e) => {
 });
 // loading state
 video.addEventListener("waiting", () => {
-    loadingIndicator.style.display = "block";
+    if (!video.seeking) loadingIndicator.style.display = "block";
 });
 video.addEventListener("playing", () => {
     loadingIndicator.style.display = "none";
@@ -150,28 +151,35 @@ volumeSlider.addEventListener("input", (e) => {
     video.muted = e.target.value === 0;
 });
 // duration
+video.addEventListener("loadstart", () => {
+    //remove progress from new video
+    if (prevVideo !== queryParams.get("v")) {
+        bufferedSegment.style.left = "0%";
+        bufferedSegment.style.width = "0";
+        timelineContainer.style.setProperty("--progress-position", 0);
+        currentTime.textContent = formatDuration(video.currentTime);
+        return;
+    }
+});
 video.addEventListener("loadeddata", async () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
     video.playbackRate = localStorage.getItem("speed") || 1;
     speedBtn.textContent = `${video.playbackRate}x`;
-    //remove progress from new video
-    if (prevVideo !== queryParams.get("v")) {
-        timelineContainer.style.removeProperty("--progress-position");
-        currentTime.textContent = formatDuration(video.currentTime);
-        return;
-    }
     const percent = timelineContainer.style.getPropertyValue(
         "--progress-position"
     );
     video.currentTime = percent * video.duration;
     if (wasPaused === false) await video.play();
 });
-video.addEventListener("timeupdate", () => {
+// buffer timeline
+// triggers on playback or "video.currentTime" change
+video.addEventListener("timeupdate", (e) => {
     if (video.duration) {
         currentTime.textContent = formatDuration(video.currentTime);
         const percent = video.currentTime / video.duration;
         timelineContainer.style.setProperty("--progress-position", percent);
+        updateBufferRange();
     }
 });
 // playback speed
@@ -565,6 +573,33 @@ function handleTimelineUpdate(e) {
         if (previewImgSrc) thumbnailImg.src = previewImgSrc;
         timelineContainer.style.setProperty("--progress-position", percent);
     }
+}
+// buffered range
+function updateBufferRange() {
+    const bufferRange = video.buffered;
+    if (bufferRange.length === 0) {
+        bufferedSegment.style.left = "0%";
+        bufferedSegment.style.width = "100%";
+        return;
+    }
+    // check current position of playback
+    let bufferIndex = bufferRange.start(0);
+    for (let i = 0; i < bufferRange.length; i++) {
+        if (
+            video.currentTime >= bufferRange.start(i) &&
+            video.currentTime < bufferRange.end(i)
+        ) {
+            bufferIndex = i;
+        }
+    }
+    const bufferedStart = bufferRange.start(bufferIndex);
+    const bufferedEnd = bufferRange.end(bufferIndex);
+    const bufferedWidth = `${
+        ((bufferedEnd - bufferedStart) / video.duration) * 100
+    }%`;
+
+    bufferedSegment.style.left = `${(bufferedStart / video.duration) * 100}%`;
+    bufferedSegment.style.width = bufferedWidth;
 }
 
 async function togglePlay() {

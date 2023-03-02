@@ -65,11 +65,7 @@ li {
         flex-direction: column;
     }
     #left {
-        order: 2;
         width: 100%;
-    }
-    #right {
-        order: 1;
     }
 }
 
@@ -412,6 +408,24 @@ video::-webkit-media-controls-enclosure {
     font-weight: 600;
     margin: 0.5rem 0;
     align-self: flex-start;
+}
+.embedded-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+}
+.embedded-container label {
+    flex-shrink: 0;
+}
+.embedded-link {
+    font-size: 1rem;
+    color: white;
+    background: none;
+    outline: none;
+    border: none;
+    border-bottom: 2px solid var(--unfilled);
+    resize: none;
 }
 
 /* TOKEN */

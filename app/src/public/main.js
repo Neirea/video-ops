@@ -42,6 +42,7 @@ const qualityBtn = document.querySelector(".quality-btn");
 const qualityList = document.querySelector(".quality-list");
 const openFullScreenElem = document.querySelector(".open");
 const closeFullScreenElem = document.querySelector(".close");
+const embeddedLink = document.querySelector(".embedded-link");
 
 let queryParams = new URLSearchParams(window.location.search);
 
@@ -66,6 +67,7 @@ window.addEventListener("popstate", async (e) => {
     const q = localStorage.getItem("vo-quality") || 1080;
     deleteImages();
     getThumbnails(v);
+    embeddedLink.textContent = getIframeLink(v);
     if (!q) {
         videoDesc.textContent = await getVideoTitle(videos, v);
         video.src = `/video?v=${v}`;
@@ -204,6 +206,13 @@ document.addEventListener("click", (e) => {
     if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
         qualityList.style.display = "none";
     }
+    if (!e.target.contains(embeddedLink)) {
+        window.getSelection().removeAllRanges();
+    }
+});
+// adjust size of embedded link textarea
+embeddedLink.addEventListener("click", (e) => {
+    window.getSelection().selectAllChildren(embeddedLink);
 });
 qualityList.addEventListener("click", (e) => {
     const quality = parseInt(e.target.textContent.split("p")[0]);
@@ -495,6 +504,7 @@ async function setDefault() {
     if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
     qualityBtn.textContent = quality + "p";
     video.src = `/video?v=${videoUrl}&q=${quality}`;
+    embeddedLink.textContent = getIframeLink(videoUrl);
     videoDesc.textContent = await getVideoTitle(videos, videoUrl);
     getThumbnails(videoUrl);
     // volume
@@ -736,9 +746,14 @@ function createVideoListElement(name, url) {
             deleteImages();
             getThumbnails(url);
             video.src = `/video?v=${url}&q=${quality}`;
+            embeddedLink.textContent = getIframeLink(url);
         }
     });
     videosList.prepend(listElem);
+}
+
+function getIframeLink(url) {
+    return ` <iframe src="${window.location.origin}/embed/${url}" frameborder="0" width="640" height="360"></iframe>`;
 }
 
 function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {

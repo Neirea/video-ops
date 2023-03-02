@@ -63,7 +63,7 @@ appTitle.addEventListener("click", () => {
 window.addEventListener("popstate", async (e) => {
     queryParams = new URLSearchParams(window.location.search);
     const v = queryParams.get("v");
-    const q = localStorage.getItem("quality") || 1080;
+    const q = localStorage.getItem("vo-quality") || 1080;
     deleteImages();
     getThumbnails(v);
     if (!q) {
@@ -133,7 +133,7 @@ video.addEventListener("volumechange", () => {
     volumeSlider.value = video.volume;
     volumeSlider.style.background = `linear-gradient(90deg, white ${
         video.volume * 100
-    }%, gray 0%)`;
+    }%, var(--unfilled) 0%)`;
     let volumeLevel;
     if (video.muted || video.volume === 0) {
         volumeSlider.value = 0;
@@ -144,7 +144,7 @@ video.addEventListener("volumechange", () => {
         volumeLevel = "low";
     }
     videoPlayer.dataset.volumeLevel = volumeLevel;
-    localStorage.setItem("volume", video.volume);
+    localStorage.setItem("vo-volume", video.volume);
 });
 volumeSlider.addEventListener("input", (e) => {
     video.volume = e.target.value;
@@ -158,13 +158,15 @@ video.addEventListener("loadstart", () => {
         bufferedSegment.style.width = "0";
         timelineContainer.style.setProperty("--progress-position", 0);
         currentTime.textContent = formatDuration(video.currentTime);
-        return;
+        //preset playback speed text
+        const savedPlaybackRate = localStorage.getItem("vo-speed");
+        if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
     }
 });
 video.addEventListener("loadeddata", async () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
-    video.playbackRate = localStorage.getItem("speed") || 1;
+    video.playbackRate = localStorage.getItem("vo-speed") || 1;
     speedBtn.textContent = `${video.playbackRate}x`;
     const percent = timelineContainer.style.getPropertyValue(
         "--progress-position"
@@ -188,7 +190,7 @@ speedBtn.addEventListener("click", () => {
     if (newPlaybackRate > 2) newPlaybackRate = 0.25;
     video.playbackRate = newPlaybackRate;
     speedBtn.textContent = `${newPlaybackRate}x`;
-    localStorage.setItem("speed", newPlaybackRate);
+    localStorage.setItem("vo-speed", newPlaybackRate);
 });
 // quality
 qualityBtn.addEventListener("click", (e) => {
@@ -198,9 +200,14 @@ qualityBtn.addEventListener("click", (e) => {
         qualityList.style.display = "block";
     }
 });
+document.addEventListener("click", (e) => {
+    if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
+        qualityList.style.display = "none";
+    }
+});
 qualityList.addEventListener("click", (e) => {
-    const quality = parseInt(e.target.textContent);
-    localStorage.setItem("quality", quality);
+    const quality = parseInt(e.target.textContent.split("p")[0]);
+    localStorage.setItem("vo-quality", quality);
     qualityBtn.textContent = quality + "p";
     const videoParam = queryParams.get("v");
     const videoSrc = `video?v=${videoParam}&q=${quality}`;
@@ -475,21 +482,23 @@ btnUpload.addEventListener("click", () => {
 
 async function setDefault() {
     // default
-    if (localStorage.getItem("quality") == null) {
-        localStorage.setItem("quality", "1080");
+    if (localStorage.getItem("vo-quality") == null) {
+        localStorage.setItem("vo-quality", "1080");
     }
     if (!queryParams.get("v")) {
         queryParams.set("v", "default");
         history.replaceState(null, null, "?v=default");
     }
     const videoUrl = queryParams.get("v");
-    const quality = localStorage.getItem("quality");
+    const quality = localStorage.getItem("vo-quality");
+    const savedPlaybackRate = localStorage.getItem("vo-speed");
+    if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
     qualityBtn.textContent = quality + "p";
     video.src = `/video?v=${videoUrl}&q=${quality}`;
     videoDesc.textContent = await getVideoTitle(videos, videoUrl);
     getThumbnails(videoUrl);
     // volume
-    video.volume = localStorage.getItem("volume") || 0.5;
+    video.volume = localStorage.getItem("vo-volume") || 0.5;
 }
 
 async function getVideoList() {
@@ -502,7 +511,7 @@ async function getVideoList() {
 async function getVideoTitle(videos, urlName) {
     return (
         (await videos).find((item) => item.url === urlName).name ||
-        "Default video"
+        "Unknown title"
     );
 }
 
@@ -629,60 +638,6 @@ function skip(duration) {
     video.currentTime += duration;
 }
 
-function createVideoListElement(name, url) {
-    const listElem = document.createElement("li");
-    listElem.textContent = name;
-    listElem.addEventListener("click", () => {
-        queryParams.set("v", url);
-        const newUrl = "?" + queryParams.toString();
-        // Use pushState to update the URL without reloading the page
-        if (window.location.search !== queryParams.toString()) {
-            history.pushState({ path: newUrl }, "", newUrl);
-            videoDesc.textContent = name;
-            videoPlayer.classList.add("paused");
-            const quality = localStorage.getItem("quality") || 1080;
-            deleteImages();
-            getThumbnails(url);
-            video.src = `/video?v=${url}&q=${quality}`;
-        }
-    });
-    videosList.prepend(listElem);
-}
-
-function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener("progress", (e) => {
-            reqProgress[idx].loaded = e.loaded;
-            const currentProgress = Object.keys(reqProgress).reduce(
-                (prev, curr) => {
-                    if (!isNaN(curr)) {
-                        return prev + reqProgress[curr].loaded;
-                    }
-                    return prev;
-                },
-                0
-            );
-            htmlElem.textContent = `${Math.floor(
-                (currentProgress / reqProgress.total) * 100
-            )}%`;
-        });
-        xhr.open(method, url);
-        xhr.onload = function () {
-            if (xhr.status === 200) {
-                const ETag = xhr.getResponseHeader("ETag");
-                resolve({ ETag, PartNumber: idx + 1 });
-            }
-        };
-        xhr.onerror = function (error) {
-            reject(error);
-        };
-        xhr.onabort = function () {
-            reject(new Error("Upload cancelled by user"));
-        };
-        xhr.send(body);
-    });
-}
 function getThumbnails(imgName) {
     fetch(`/image?img=${imgName}`)
         .then((res) => res.blob())
@@ -756,7 +711,7 @@ function deriveImages(source) {
 }
 
 function deleteImages() {
-    if (!thumbnails) return;
+    if (!thumbnails.length) return;
     thumbnails.forEach((url) => {
         URL.revokeObjectURL(url);
     });
@@ -764,6 +719,61 @@ function deleteImages() {
     while (thumbnails.length > 0) {
         thumbnails.pop();
     }
+}
+
+function createVideoListElement(name, url) {
+    const listElem = document.createElement("li");
+    listElem.textContent = name;
+    listElem.addEventListener("click", () => {
+        queryParams.set("v", url);
+        const newUrl = "?" + queryParams.toString();
+        // Use pushState to update the URL without reloading the page
+        if (window.location.search !== queryParams.toString()) {
+            history.pushState({ path: newUrl }, "", newUrl);
+            videoDesc.textContent = name;
+            videoPlayer.classList.add("paused");
+            const quality = localStorage.getItem("vo-quality") || 1080;
+            deleteImages();
+            getThumbnails(url);
+            video.src = `/video?v=${url}&q=${quality}`;
+        }
+    });
+    videosList.prepend(listElem);
+}
+
+function trackedRequest(url, method, body, idx, reqProgress, htmlElem) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (e) => {
+            reqProgress[idx].loaded = e.loaded;
+            const currentProgress = Object.keys(reqProgress).reduce(
+                (prev, curr) => {
+                    if (!isNaN(curr)) {
+                        return prev + reqProgress[curr].loaded;
+                    }
+                    return prev;
+                },
+                0
+            );
+            htmlElem.textContent = `${Math.floor(
+                (currentProgress / reqProgress.total) * 100
+            )}%`;
+        });
+        xhr.open(method, url);
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                const ETag = xhr.getResponseHeader("ETag");
+                resolve({ ETag, PartNumber: idx + 1 });
+            }
+        };
+        xhr.onerror = function (error) {
+            reject(error);
+        };
+        xhr.onabort = function () {
+            reject(new Error("Upload cancelled by user"));
+        };
+        xhr.send(body);
+    });
 }
 
 function resetUI(error) {

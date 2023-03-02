@@ -16,6 +16,7 @@ import notFound from "./middleware/not-found";
 import { Storage } from "@google-cloud/storage";
 import mongoose from "mongoose";
 import { Video, Token } from "./model";
+import { readFile } from "fs/promises";
 
 const BUCKET_NAME = process.env.GCP_RAW_BUCKET!;
 
@@ -46,32 +47,24 @@ const app = express();
 mongoose.set("strictQuery", false);
 mongoose.connect(process.env.MONGO_URL!);
 
-const prodURL = process.env.RAILWAY_STATIC_URL;
+const serverUrl = process.env.RAILWAY_STATIC_URL || "http://localhost:5000";
 
 app.use(
     helmet({
         contentSecurityPolicy: {
             directives: {
                 "connect-src": [
-                    prodURL || "http://localhost:5000",
+                    serverUrl,
                     process.env.WS_URL || "ws://localhost:8080",
                     `https://${process.env.GCP_RAW_BUCKET}.storage.googleapis.com`,
                 ],
-                "img-src": [
-                    "self",
-                    prodURL || "http://localhost:5000",
-                    "blob:",
-                ],
+                "img-src": ["self", serverUrl, "blob:"],
             },
         },
     })
 );
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "public")));
-
-app.use("/videos/:id", (req, res) => {
-    res.send();
-});
 
 // Rate limiting middleware
 const limiter = rateLimit({
@@ -206,6 +199,46 @@ app.get("/video", async (req, res) => {
 
     // Stream the video chunk to the client
     videoStream.pipe(res);
+});
+
+// CSP for embeded route
+const embedHelmet = helmet.contentSecurityPolicy({
+    directives: {
+        "img-src": ["self", "blob:"],
+        "frame-ancestors": "*",
+    },
+});
+
+app.get("/static/embed/css", async function (req, res) {
+    var css = await readFile(__dirname + "/embed/style.css", "utf8");
+    res.setHeader("Content-Type", "text/css");
+    res.send(css);
+});
+
+app.get("/static/embed/js", async function (req, res) {
+    var js = await readFile(__dirname + "/embed/main.js", "utf8");
+    res.setHeader("Content-Type", "application/javascript");
+    res.send(js);
+});
+
+app.get("/embed/:id", embedHelmet, async (req, res) => {
+    const headers = req.headers;
+    const isIframe =
+        headers["x-requested-with"] === "XMLHttpRequest" ||
+        headers["sec-fetch-dest"] === "iframe";
+    if (!isIframe) {
+        res.status(404).send("Sorry can only use this route as iframe src");
+        return;
+    }
+    const video = await Video.findOne({ url: req.params.id });
+    const videoTitle = video ? video.name : "Unknown Title";
+
+    const html1 = await readFile(__dirname + "/embed/index.html", "utf-8");
+    const html2 = html1.replace(/%ID%/g, req.params.id);
+    const html3 = html2.replace(/%SERVER_URL%/g, serverUrl);
+    const resHtml = html3.replace(/%NAME%/g, videoTitle);
+    res.set("Origin-Agent-Cluster", "site");
+    res.send(resHtml);
 });
 
 app.get("/image", async (req, res) => {

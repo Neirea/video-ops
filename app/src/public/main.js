@@ -174,7 +174,7 @@ video.addEventListener("loadeddata", async () => {
         "--progress-position"
     );
     video.currentTime = percent * video.duration;
-    if (wasPaused === false) await video.play();
+    if (wasPaused === false) await playVideo();
 });
 // buffer timeline
 // triggers on playback or "video.currentTime" change
@@ -537,7 +537,7 @@ async function toggleScrubbing(e) {
         video.pause();
     } else {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await video.play();
+        if (!wasPaused) await playVideo();
     }
 
     handleTimelineUpdate(e);
@@ -565,7 +565,7 @@ async function handleTouchStartScrubbing(e) {
 
     document.ontouchend = document.ontouchcancel = async function () {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await video.play();
+        if (!wasPaused) await playVideo();
         videoPlayer.classList.remove("scrubbing");
         isScrubbing = false;
     };
@@ -622,7 +622,7 @@ function updateBufferRange() {
 }
 
 async function togglePlay() {
-    video.paused ? await video.play() : video.pause();
+    video.paused ? await playVideo() : video.pause();
 }
 
 function toggleMute() {
@@ -643,6 +643,11 @@ function formatDuration(time) {
             minutes
         )}:${leadingZeroFormatter.format(seconds)}`;
     }
+}
+async function playVideo() {
+    try {
+        await video.play();
+    } catch (error) {}
 }
 function skip(duration) {
     video.currentTime += duration;

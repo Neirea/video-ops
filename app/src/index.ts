@@ -201,27 +201,17 @@ app.get("/video", async (req, res) => {
     videoStream.pipe(res);
 });
 
-// CSP for embeded route
-const embedHelmet = helmet.contentSecurityPolicy({
+// CSP for embedded route
+const embeddedHelmet = helmet.contentSecurityPolicy({
     directives: {
         "img-src": ["self", "blob:"],
         "frame-ancestors": "*",
     },
 });
 
-app.get("/static/embed/css", async function (req, res) {
-    var css = await readFile(__dirname + "/embed/style.css", "utf8");
-    res.setHeader("Content-Type", "text/css");
-    res.send(css);
-});
-
-app.get("/static/embed/js", async function (req, res) {
-    var js = await readFile(__dirname + "/embed/main.js", "utf8");
-    res.setHeader("Content-Type", "application/javascript");
-    res.send(js);
-});
-
-app.get("/embed/:id", embedHelmet, async (req, res) => {
+// embedded video into iframe
+app.use("/embed", express.static(path.join(__dirname, "embed/public")));
+app.get("/embed/:id", embeddedHelmet, async (req, res) => {
     const headers = req.headers;
     const isIframe =
         headers["x-requested-with"] === "XMLHttpRequest" ||

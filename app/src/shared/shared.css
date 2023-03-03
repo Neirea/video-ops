@@ -1,6 +1,5 @@
 :root {
     --status-active: mediumpurple;
-    --status-inactive: rgb(25, 25, 25);
     --slider-color: rgb(76, 0, 255);
     --unfilled: rgba(100, 100, 100, 0.5);
     --controls-opacity: 0.85;
@@ -15,7 +14,7 @@ html {
     overflow: hidden;
 }
 body {
-    background-color: var(--status-inactive);
+    background-color: rgb(25, 25, 25);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
         "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
         "Helvetica Neue", sans-serif;

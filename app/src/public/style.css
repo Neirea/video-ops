@@ -1,7 +1,8 @@
 :root {
     --status-main: pink;
+    --status-inactive: rgb(100, 100, 100);
     --btn-inactive: rgb(100, 100, 100);
-    --circle-inactive: #373737;
+    --circle-inactive: #252525;
     --status-circle-inactive: #5a5a5a;
     --left-color: #26282c;
 }
@@ -75,7 +76,20 @@ h2 {
 .video-list li:hover {
     opacity: 1;
 }
+/* full screen images */
+.video-player:fullscreen .open {
+    display: none;
+}
 
+.video-player:not(:fullscreen) .close {
+    display: none;
+}
+.controls button.full-screen-btn {
+    opacity: var(--controls-opacity);
+}
+.controls button.full-screen-btn:hover {
+    opacity: 1;
+}
 /* video description */
 .video-desc {
     font-size: 1.5rem;

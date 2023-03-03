@@ -26,7 +26,6 @@ wss.on("connection", (socket) => {
         const data = JSON.parse(rawData.toString());
         //join room based on fileName
         if (data.type === "upload" && !wschat[data.fileName]) {
-            console.log(`Joined chat with id: ${data.fileName}`);
             wschat[data.fileName] = socket;
             dbNames[data.fileName] = data.dbName;
         }
@@ -151,7 +150,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
             return res;
         })
     );
-
+    console.log(`Starting transcoding video - ${urlName}`);
     try {
         await Promise.all(commandsBatch);
 

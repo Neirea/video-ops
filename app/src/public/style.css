@@ -2,6 +2,7 @@
     --status-main: pink;
     --status-inactive: rgb(100, 100, 100);
     --btn-inactive: rgb(100, 100, 100);
+    --btn-color: white:
     --circle-inactive: #252525;
     --status-circle-inactive: #5a5a5a;
     --left-color: #26282c;
@@ -147,7 +148,7 @@ h2 {
     border: 1px solid white;
     border-radius: 0.25rem;
     font-size: 1.25rem;
-    background-color: var(--status-inactive);
+    background: var(--btn-color);
 }
 .file-selected,
 .status-main {
@@ -157,12 +158,14 @@ h2 {
     overflow: hidden;
     white-space: nowrap;
 }
-.file:disabled + .file-label {
+.file:disabled + .file-label,
+.btn-upload:disabled {
     border-color: var(--btn-inactive);
     color: var(--btn-inactive);
     cursor: not-allowed;
 }
-.file:not(:disabled) + .file-label:hover {
+.file:not(:disabled) + .file-label:hover,
+.btn-upload:not(:disabled):hover {
     background: rgb(50, 50, 50);
     cursor: pointer;
 }
@@ -171,7 +174,7 @@ h2 {
 .btn-upload {
     appearance: none;
     line-height: 1.5;
-    background-color: var(--status-inactive);
+    background: var(--btn-color);
     color: white;
     border-radius: 0.25rem;
     border: 1px solid white;
@@ -180,15 +183,6 @@ h2 {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
         "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
         "Helvetica Neue", sans-serif;
-}
-.btn-upload:disabled {
-    border-color: var(--btn-inactive);
-    color: var(--btn-inactive);
-    cursor: not-allowed;
-}
-.btn-upload:not(:disabled):hover {
-    background: rgb(50, 50, 50);
-    cursor: pointer;
 }
 /* STATUS CLASSES */
 .status-main {

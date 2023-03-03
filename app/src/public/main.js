@@ -182,7 +182,7 @@ video.addEventListener("loadeddata", async () => {
 });
 // buffer timeline
 // triggers on playback or "video.currentTime" change
-video.addEventListener("timeupdate", (e) => {
+video.addEventListener("timeupdate", () => {
     if (isNaN(video.duration)) return;
     currentTime.textContent = formatDuration(video.currentTime);
     const percent = video.currentTime / video.duration;
@@ -222,10 +222,9 @@ qualityList.addEventListener("click", (e) => {
     localStorage.setItem("vo-quality", quality);
     qualityBtn.textContent = quality + "p";
     const videoParam = queryParams.get("v");
-    const videoSrc = `video?v=${videoParam}&q=${quality}`;
     wasPaused = video.paused;
     prevVideo = videoParam;
-    video.src = videoSrc;
+    video.src = `video?v=${videoParam}&q=${quality}`;
     qualityList.style.display = "none";
 });
 // full screen
@@ -497,15 +496,18 @@ async function setDefault() {
     if (localStorage.getItem("vo-quality") == null) {
         localStorage.setItem("vo-quality", "1080");
     }
+    if (localStorage.getItem("vo-speed") == null) {
+        localStorage.setItem("vo-speed", 1);
+    }
     if (!queryParams.get("v")) {
         queryParams.set("v", "default");
         history.replaceState(null, null, "?v=default");
     }
     const videoUrl = queryParams.get("v");
     const quality = localStorage.getItem("vo-quality");
-    const savedPlaybackRate = localStorage.getItem("vo-speed");
-    if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
     qualityBtn.textContent = quality + "p";
+    const playbackRate = localStorage.getItem("vo-speed");
+    speedBtn.textContent = `${playbackRate}x`;
     video.src = `/video?v=${videoUrl}&q=${quality}`;
     embeddedLink.textContent = getIframeLink(videoUrl);
     videoDesc.textContent = await getVideoTitle(videos, videoUrl);

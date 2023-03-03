@@ -93,17 +93,16 @@ video.addEventListener("loadeddata", async () => {
         "--progress-position"
     );
     video.currentTime = percent * video.duration;
-    if (wasPaused === false) await video.play();
+    if (wasPaused === false) await playVideo();
 });
 // buffer timeline
 // triggers on playback or "video.currentTime" change
-video.addEventListener("timeupdate", (e) => {
-    if (video.duration) {
-        currentTime.textContent = formatDuration(video.currentTime);
-        const percent = video.currentTime / video.duration;
-        timelineContainer.style.setProperty("--progress-position", percent);
-        updateBufferRange();
-    }
+video.addEventListener("timeupdate", () => {
+    if (isNaN(video.duration)) return;
+    currentTime.textContent = formatDuration(video.currentTime);
+    const percent = video.currentTime / video.duration;
+    timelineContainer.style.setProperty("--progress-position", percent);
+    updateBufferRange();
 });
 // playback speed
 speedBtn.addEventListener("click", () => {
@@ -143,8 +142,13 @@ async function setDefault() {
     if (localStorage.getItem("vo-quality") == null) {
         localStorage.setItem("vo-quality", "1080");
     }
+    if (localStorage.getItem("vo-speed") == null) {
+        localStorage.setItem("vo-speed", 1);
+    }
     const quality = localStorage.getItem("vo-quality");
     qualityBtn.textContent = quality + "p";
+    const playbackRate = localStorage.getItem("vo-speed");
+    speedBtn.textContent = `${playbackRate}x`;
     video.src = videoSrc + `&q=${quality}`;
     getThumbnails(videoUrl);
     // volume
@@ -153,6 +157,7 @@ async function setDefault() {
 
 //timeline
 async function toggleScrubbing(e) {
+    if (isNaN(video.duration)) return;
     const rect = timelineContainer.getBoundingClientRect();
     const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
@@ -163,13 +168,14 @@ async function toggleScrubbing(e) {
         video.pause();
     } else {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await video.play();
+        if (wasPaused === false) await playVideo();
     }
 
     handleTimelineUpdate(e);
 }
 async function handleTouchStartScrubbing(e) {
     if (e.targetTouches.length > 1) return;
+    if (isNaN(video.duration)) return;
     const rect = timelineContainer.getBoundingClientRect();
     let percent =
         Math.min(Math.max(0, e.targetTouches[0].pageX - rect.x), rect.width) /
@@ -191,9 +197,14 @@ async function handleTouchStartScrubbing(e) {
 
     document.ontouchend = document.ontouchcancel = async function () {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await video.play();
+        if (wasPaused === false) await playVideo();
         videoPlayer.classList.remove("scrubbing");
         isScrubbing = false;
+        //remove event listeners
+        document.ontouchend =
+            document.ontouchcancel =
+            document.ontouchmove =
+                null;
     };
 }
 function handleTimelineUpdate(e) {
@@ -248,7 +259,7 @@ function updateBufferRange() {
 }
 
 async function togglePlay() {
-    video.paused ? await video.play() : video.pause();
+    video.paused ? await playVideo() : video.pause();
 }
 
 function toggleMute() {
@@ -270,8 +281,10 @@ function formatDuration(time) {
         )}:${leadingZeroFormatter.format(seconds)}`;
     }
 }
-function skip(duration) {
-    video.currentTime += duration;
+async function playVideo() {
+    try {
+        await video.play();
+    } catch (error) {}
 }
 
 function getThumbnails(imgName) {
@@ -283,7 +296,8 @@ function getThumbnails(imgName) {
             deriveImages(thumbnailCollage).then((res) => {
                 thumbnails = res;
             });
-        });
+        })
+        .catch((e) => console.log(e));
 }
 
 function deriveImages(source) {

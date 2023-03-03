@@ -65,6 +65,7 @@ app.use(
 );
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "public")));
+app.use("/", express.static(path.join(__dirname, "shared")));
 
 // Rate limiting middleware
 const limiter = rateLimit({
@@ -210,7 +211,8 @@ const embeddedHelmet = helmet.contentSecurityPolicy({
 });
 
 // embedded video into iframe
-app.use("/embed", express.static(path.join(__dirname, "embed/public")));
+app.use("/embed", express.static(path.join(__dirname, "embed/player")));
+app.use("/embed", express.static(path.join(__dirname, "shared")));
 app.get("/embed/:id", embeddedHelmet, async (req, res) => {
     const headers = req.headers;
     const isIframe =

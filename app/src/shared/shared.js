@@ -1,9 +1,7 @@
 const video = document.querySelector("video");
-const videoDesc = document.querySelector(".video-desc");
 const videoPlayer = document.querySelector(".video-player");
 const loadingIndicator = document.querySelector(".loading-indicator");
 const playPauseBtn = document.querySelector(".play-pause-btn");
-const fullScreenBtn = document.querySelector(".full-screen-btn");
 const muteBtn = document.querySelector(".mute-btn");
 const volumeSlider = document.querySelector(".volume-slider");
 const currentTime = document.querySelector(".current-time");
@@ -15,17 +13,10 @@ const previewImg = document.querySelector(".preview-img");
 const thumbnailImg = document.querySelector(".thumbnail-img");
 const qualityBtn = document.querySelector(".quality-btn");
 const qualityList = document.querySelector(".quality-list");
-const openFullScreenElem = document.querySelector(".open");
-const closeFullScreenElem = document.querySelector(".close");
-const videoTitle = document.querySelector(".video-title");
 
 let thumbnails = [];
 let isScrubbing = false;
 let wasPaused;
-const videoSrc = video.dataset.url;
-const videoUrl = videoSrc.split("?v=")[1];
-
-setDefault();
 // loading state
 video.addEventListener("waiting", () => {
     if (!video.seeking) loadingIndicator.style.display = "block";
@@ -33,7 +24,6 @@ video.addEventListener("waiting", () => {
 video.addEventListener("playing", () => {
     loadingIndicator.style.display = "none";
 });
-
 // timeline
 timelineContainer.addEventListener("mousemove", handleTimelineUpdate);
 timelineContainer.addEventListener("mousedown", toggleScrubbing);
@@ -77,13 +67,7 @@ volumeSlider.addEventListener("input", (e) => {
     video.volume = e.target.value;
     video.muted = e.target.value === 0;
 });
-// duration
-video.addEventListener("loadstart", () => {
-    currentTime.textContent = formatDuration(video.currentTime);
-    //preset playback speed text
-    const savedPlaybackRate = localStorage.getItem("vo-speed");
-    if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
-});
+
 video.addEventListener("loadeddata", async () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);
@@ -104,6 +88,7 @@ video.addEventListener("timeupdate", () => {
     timelineContainer.style.setProperty("--progress-position", percent);
     updateBufferRange();
 });
+
 // playback speed
 speedBtn.addEventListener("click", () => {
     let newPlaybackRate = video.playbackRate + 0.25;
@@ -120,41 +105,6 @@ qualityBtn.addEventListener("click", (e) => {
         qualityList.style.display = "block";
     }
 });
-document.addEventListener("click", (e) => {
-    if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
-        qualityList.style.display = "none";
-    }
-});
-window.addEventListener("blur", () => {
-    qualityList.style.display = "none";
-});
-qualityList.addEventListener("click", (e) => {
-    const quality = parseInt(e.target.textContent.split("p")[0]);
-    localStorage.setItem("vo-quality", quality);
-    qualityBtn.textContent = quality + "p";
-    wasPaused = video.paused;
-    video.src = videoSrc + `&q=${quality}`;
-    qualityList.style.display = "none";
-});
-
-async function setDefault() {
-    // default
-    if (localStorage.getItem("vo-quality") == null) {
-        localStorage.setItem("vo-quality", "1080");
-    }
-    if (localStorage.getItem("vo-speed") == null) {
-        localStorage.setItem("vo-speed", 1);
-    }
-    const quality = localStorage.getItem("vo-quality");
-    qualityBtn.textContent = quality + "p";
-    const playbackRate = localStorage.getItem("vo-speed");
-    speedBtn.textContent = `${playbackRate}x`;
-    video.src = videoSrc + `&q=${quality}`;
-    getThumbnails(videoUrl);
-    // volume
-    video.volume = localStorage.getItem("vo-volume") || 0.5;
-}
-
 //timeline
 async function toggleScrubbing(e) {
     if (isNaN(video.duration)) return;
@@ -173,6 +123,7 @@ async function toggleScrubbing(e) {
 
     handleTimelineUpdate(e);
 }
+
 async function handleTouchStartScrubbing(e) {
     if (e.targetTouches.length > 1) return;
     if (isNaN(video.duration)) return;
@@ -207,6 +158,7 @@ async function handleTouchStartScrubbing(e) {
                 null;
     };
 }
+
 function handleTimelineUpdate(e) {
     const x = e.x || e.targetTouches[0].pageX;
     const rect = timelineContainer.getBoundingClientRect();
@@ -230,6 +182,7 @@ function handleTimelineUpdate(e) {
         timelineContainer.style.setProperty("--progress-position", percent);
     }
 }
+
 // buffered range
 function updateBufferRange() {
     const bufferRange = video.buffered;
@@ -259,6 +212,7 @@ function updateBufferRange() {
 }
 
 async function togglePlay() {
+    if (isNaN(video.duration)) return;
     video.paused ? await playVideo() : video.pause();
 }
 
@@ -294,7 +248,7 @@ function getThumbnails(imgName) {
         .then((thumbnailCollage) => {
             //get images for preview
             deriveImages(thumbnailCollage).then((res) => {
-                thumbnails = res;
+                thumbnails = [...res];
             });
         })
         .catch((e) => console.log(e));
@@ -360,15 +314,4 @@ function deriveImages(source) {
         };
         thumbnailCollage.onerror = reject;
     });
-}
-
-function deleteImages() {
-    if (!thumbnails) return;
-    thumbnails.forEach((url) => {
-        URL.revokeObjectURL(url);
-    });
-    //empty array
-    while (thumbnails.length > 0) {
-        thumbnails.pop();
-    }
 }

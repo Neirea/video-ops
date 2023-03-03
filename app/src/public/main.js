@@ -163,6 +163,7 @@ video.addEventListener("loadstart", () => {
         //preset playback speed text
         const savedPlaybackRate = localStorage.getItem("vo-speed");
         if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
+        videoPlayer.classList.add("paused");
     }
 });
 video.addEventListener("loadeddata", async () => {
@@ -179,12 +180,11 @@ video.addEventListener("loadeddata", async () => {
 // buffer timeline
 // triggers on playback or "video.currentTime" change
 video.addEventListener("timeupdate", (e) => {
-    if (video.duration) {
-        currentTime.textContent = formatDuration(video.currentTime);
-        const percent = video.currentTime / video.duration;
-        timelineContainer.style.setProperty("--progress-position", percent);
-        updateBufferRange();
-    }
+    if (isNaN(video.duration)) return;
+    currentTime.textContent = formatDuration(video.currentTime);
+    const percent = video.currentTime / video.duration;
+    timelineContainer.style.setProperty("--progress-position", percent);
+    updateBufferRange();
 });
 // playback speed
 speedBtn.addEventListener("click", () => {
@@ -527,6 +527,7 @@ async function getVideoTitle(videos, urlName) {
 
 //timeline
 async function toggleScrubbing(e) {
+    if (isNaN(video.duration)) return;
     const rect = timelineContainer.getBoundingClientRect();
     const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width;
@@ -537,13 +538,14 @@ async function toggleScrubbing(e) {
         video.pause();
     } else {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await playVideo();
+        if (wasPaused === false) await playVideo();
     }
 
     handleTimelineUpdate(e);
 }
 async function handleTouchStartScrubbing(e) {
     if (e.targetTouches.length > 1) return;
+    if (isNaN(video.duration)) return;
     const rect = timelineContainer.getBoundingClientRect();
     let percent =
         Math.min(Math.max(0, e.targetTouches[0].pageX - rect.x), rect.width) /
@@ -565,9 +567,14 @@ async function handleTouchStartScrubbing(e) {
 
     document.ontouchend = document.ontouchcancel = async function () {
         video.currentTime = percent * video.duration;
-        if (!wasPaused) await playVideo();
+        if (wasPaused === false) await playVideo();
         videoPlayer.classList.remove("scrubbing");
         isScrubbing = false;
+        //remove event listeners
+        document.ontouchend =
+            document.ontouchcancel =
+            document.ontouchmove =
+                null;
     };
 }
 function handleTimelineUpdate(e) {
@@ -622,6 +629,7 @@ function updateBufferRange() {
 }
 
 async function togglePlay() {
+    if (isNaN(video.duration)) return;
     video.paused ? await playVideo() : video.pause();
 }
 
@@ -746,7 +754,6 @@ function createVideoListElement(name, url) {
         if (window.location.search !== queryParams.toString()) {
             history.pushState({ path: newUrl }, "", newUrl);
             videoDesc.textContent = name;
-            videoPlayer.classList.add("paused");
             const quality = localStorage.getItem("vo-quality") || 1080;
             deleteImages();
             getThumbnails(url);

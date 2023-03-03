@@ -673,7 +673,8 @@ function getThumbnails(imgName) {
             deriveImages(thumbnailCollage).then((res) => {
                 thumbnails = res;
             });
-        });
+        })
+        .catch((e) => console.log(e));
 }
 
 function deriveImages(source) {
@@ -751,10 +752,11 @@ function createVideoListElement(name, url) {
     const listElem = document.createElement("li");
     listElem.textContent = name;
     listElem.addEventListener("click", () => {
+        prevVideo = queryParams.get("v");
         queryParams.set("v", url);
         const newUrl = "?" + queryParams.toString();
         // Use pushState to update the URL without reloading the page
-        if (window.location.search !== queryParams.toString()) {
+        if (window.location.search !== newUrl) {
             history.pushState({ path: newUrl }, "", newUrl);
             videoDesc.textContent = name;
             const quality = localStorage.getItem("vo-quality") || 1080;

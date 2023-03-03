@@ -59,8 +59,6 @@ window.addEventListener("popstate", async (e) => {
     }
 });
 
-console.log(generateShortId());
-
 // keyboard events
 document.addEventListener("keydown", (e) => {
     const tagName = document.activeElement.tagName.toLowerCase();

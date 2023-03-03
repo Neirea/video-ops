@@ -101,17 +101,20 @@ video.addEventListener("loadstart", () => {
         wasPaused = true;
     }
 });
-document.addEventListener("click", (e) => {
-    if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
-        qualityList.style.display = "none";
-    }
-    if (!e.target.contains(embeddedLink)) {
-        window.getSelection().removeAllRanges();
+// adjust size of embedded link textarea
+embeddedLink.addEventListener("click", () => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(embeddedLink);
+    const stringRange = range.toString().trim();
+
+    selection.removeAllRanges();
+    if (selection.toString() != stringRange) {
+        selection.addRange(range);
     }
 });
-// adjust size of embedded link textarea
-embeddedLink.addEventListener("click", (e) => {
-    window.getSelection().selectAllChildren(embeddedLink);
+embeddedLink.addEventListener("blur", () => {
+    window.getSelection().removeAllRanges();
 });
 qualityList.addEventListener("click", (e) => {
     const quality = parseInt(e.target.textContent.split("p")[0]);

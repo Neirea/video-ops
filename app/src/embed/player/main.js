@@ -9,11 +9,6 @@ video.addEventListener("loadstart", () => {
     const savedPlaybackRate = localStorage.getItem("vo-speed");
     if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
 });
-document.addEventListener("click", (e) => {
-    if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
-        qualityList.style.display = "none";
-    }
-});
 window.addEventListener("blur", () => {
     qualityList.style.display = "none";
 });

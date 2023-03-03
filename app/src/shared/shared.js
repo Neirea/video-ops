@@ -68,6 +68,12 @@ volumeSlider.addEventListener("input", (e) => {
     video.muted = e.target.value === 0;
 });
 
+document.addEventListener("click", (e) => {
+    if (!(qualityList.contains(e.target) || e.target == qualityBtn)) {
+        qualityList.style.display = "none";
+    }
+});
+
 video.addEventListener("loadeddata", async () => {
     loadingIndicator.style.display = "none";
     totalTime.textContent = formatDuration(video.duration);

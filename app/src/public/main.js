@@ -154,7 +154,7 @@ volumeSlider.addEventListener("input", (e) => {
 });
 // duration
 video.addEventListener("loadstart", () => {
-    //remove progress from new video
+    //remove progress from new video and make sure it's paused
     if (prevVideo !== queryParams.get("v")) {
         bufferedSegment.style.left = "0%";
         bufferedSegment.style.width = "0";
@@ -163,7 +163,10 @@ video.addEventListener("loadstart", () => {
         //preset playback speed text
         const savedPlaybackRate = localStorage.getItem("vo-speed");
         if (savedPlaybackRate) speedBtn.textContent = `${savedPlaybackRate}x`;
+        //paused
+        video.pause();
         videoPlayer.classList.add("paused");
+        wasPaused = true;
     }
 });
 video.addEventListener("loadeddata", async () => {

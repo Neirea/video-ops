@@ -6,6 +6,7 @@ import dbConnect from "@/lib/connect-db";
 import { VideoType } from "@/models/Video";
 import Menu from "@/components/menu/Menu";
 import UploadedVideos from "@/components/menu/UploadedVideos";
+import VideoPlayer from "@/components/video-player/VideoPlayer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +20,13 @@ export default function Home({
                 {/* add: metatags and stuff */}
             </Head>
             <main
-                className={`flex min-h-{90vh} flex-col items-center ${inter.className}`}
+                className={`flex min-h-{90vh} flex-col lg:flex-row  ${inter.className}`}
             >
-                <Menu />
-                <UploadedVideos videoNames={videoNames} />
+                <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0">
+                    <Menu />
+                    <UploadedVideos videoNames={videoNames} />
+                </div>
+                <VideoPlayer />
             </main>
         </>
     );

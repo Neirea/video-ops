@@ -1,0 +1,17 @@
+import React, { ButtonHTMLAttributes } from "react";
+
+const ControlButton = ({
+    children,
+    ...attributes
+}: React.PropsWithChildren<ButtonHTMLAttributes<{}>>) => {
+    return (
+        <button
+            className="bg-none border-none p-0 h-8 w-8 text-lg cursor-pointer opacity-[85%] hover:opacity-100 transition-opacity"
+            {...attributes}
+        >
+            {children}
+        </button>
+    );
+};
+
+export default ControlButton;

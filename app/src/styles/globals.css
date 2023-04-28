@@ -20,3 +20,43 @@ body {
         "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
         "Helvetica Neue", sans-serif;
 }
+
+ul,
+li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+}
+.volume-slider::-moz-range-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+}
+.volume-slider:hover::-webkit-slider-thumb {
+    opacity: 1;
+}
+.volume-slider:hover::-moz-range-thumb {
+    opacity: 1;
+}
+.thumb-indicator {
+    left: calc(var(--progress-position) * 100%);
+}
+
+.timeline::after,
+.timeline::before {
+    right: calc(100% - var(--progress-position) * 100%);
+}

@@ -17,7 +17,6 @@ import ControlButton from "./ControlButton";
 import VideoFullClose from "../icons/VideoFullClose";
 import VideoFullOpen from "../icons/VideoFullOpen";
 import formatDuration from "@/utils/formatDuration";
-import useSWRImmutable from "swr/immutable";
 import getThumbnails from "@/utils/getThumbnails";
 
 //type support for different browsers
@@ -35,10 +34,7 @@ declare global {
     }
 }
 
-const imageFetcher = (url: string) => getThumbnails(url);
-
 const VideoPlayer = () => {
-    const [previewImg, setPreviewImg] = useState("");
     const [loading, setLoading] = useState(false);
     const [paused, setPaused] = useState(true);
     const [time, setTime] = useState("0:00");
@@ -55,20 +51,10 @@ const VideoPlayer = () => {
     const qualityRef = useRef<HTMLElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
     const wasPaused = useRef<boolean | undefined>(undefined);
-
-    // const { data: thumbnails } = useSWRImmutable("/test.jpg", imageFetcher);
-
     const thumbnails = useRef<string[]>([]);
 
     //add (qualityList)
     useOutsideClick([qualityRef], () => {});
-
-    // dirty solution to deal with event document event listeners
-    useEffect(() => {
-        isScrubbingRef.current = isScrubbing;
-    }, [isScrubbing]);
-
-    useEffect;
 
     useEffect(() => {
         if (!videoRef.current) return;
@@ -83,8 +69,7 @@ const VideoPlayer = () => {
             if (isScrubbingRef.current) toggleScrubbing(e);
         };
         const handleMove = (e: any) => {
-            if (isScrubbingRef.current)
-                handleTimelineUpdate(e, isScrubbingRef.current);
+            if (isScrubbingRef.current) handleTimelineUpdate(e);
         };
         document.addEventListener("mouseup", handleMouseUp);
         document.addEventListener("mousemove", handleMove);
@@ -94,6 +79,12 @@ const VideoPlayer = () => {
             document.removeEventListener("mousemove", handleMove);
         };
     }, []);
+
+    // dirty solution to deal with event document event listeners
+    function updateIsScrubbing(value: boolean) {
+        setIsScrubbing(value);
+        isScrubbingRef.current = value;
+    }
 
     async function handleLoadedData() {
         const video = videoRef.current;
@@ -160,8 +151,7 @@ const VideoPlayer = () => {
     }
 
     function handleTimelineUpdate(
-        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
-        scrubbing?: boolean
+        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
     ) {
         const timelineContainer = timelineRef.current;
         const previewImg = previewImgRef.current;
@@ -179,7 +169,7 @@ const VideoPlayer = () => {
             x = e.pageX;
         }
 
-        const doScrubbing = scrubbing || isScrubbing;
+        const scrubbing = isScrubbingRef.current;
 
         const rect = timelineContainer.getBoundingClientRect();
 
@@ -191,7 +181,7 @@ const VideoPlayer = () => {
             const previewImgSrc = thumbnails.current[Math.floor(percent * 100)];
             if (previewImgSrc) {
                 previewImgRef.current.src = previewImgSrc;
-                if (doScrubbing) {
+                if (scrubbing) {
                     thumbnailImgRef.current.src = previewImgSrc;
                 }
             }
@@ -211,7 +201,7 @@ const VideoPlayer = () => {
             previewPercent.toString()
         );
 
-        if (doScrubbing) {
+        if (scrubbing) {
             if (x) e.preventDefault();
             timelineContainer.style.setProperty(
                 "--progress-position",
@@ -231,9 +221,10 @@ const VideoPlayer = () => {
         const percent =
             Math.min(Math.max(0, e.pageX - rect.x), rect.width) / rect.width;
 
-        const scrubbingValue = (e.buttons & 1) === 1;
+        const scrubbing = (e.buttons & 1) === 1;
+        updateIsScrubbing(scrubbing);
 
-        if (scrubbingValue) {
+        if (scrubbing) {
             wasPaused.current = video.paused;
             pauseVideo();
         } else {
@@ -241,8 +232,7 @@ const VideoPlayer = () => {
             if (wasPaused.current === false) await playVideo();
         }
 
-        handleTimelineUpdate(e, scrubbingValue);
-        setIsScrubbing(scrubbingValue);
+        handleTimelineUpdate(e);
     }
 
     async function handleTouchStartScrubbing(e: TouchEvent<HTMLDivElement>) {
@@ -258,7 +248,7 @@ const VideoPlayer = () => {
                 Math.max(0, e.targetTouches[0].pageX - rect.x),
                 rect.width
             ) / rect.width;
-        setIsScrubbing(true);
+        updateIsScrubbing(true);
 
         document.ontouchmove = function () {
             percent =
@@ -276,7 +266,7 @@ const VideoPlayer = () => {
             video.currentTime = percent * video.duration;
             if (wasPaused.current === false) await playVideo();
 
-            setIsScrubbing(false);
+            updateIsScrubbing(false);
 
             //remove event listeners
             document.ontouchend =

@@ -1,7 +1,7 @@
 import {
     ChangeEvent,
-    MouseEvent,
     SyntheticEvent,
+    MouseEvent,
     TouchEvent,
     useEffect,
     useRef,
@@ -17,7 +17,7 @@ import ControlButton from "./ControlButton";
 import VideoFullClose from "../icons/VideoFullClose";
 import VideoFullOpen from "../icons/VideoFullOpen";
 import formatDuration from "@/utils/formatDuration";
-import useSWR from "swr";
+import useSWRImmutable from "swr/immutable";
 import getThumbnails from "@/utils/getThumbnails";
 
 //type support for different browsers
@@ -45,6 +45,8 @@ const VideoPlayer = () => {
     const [volumeLevel, setVolumeLevel] = useState("high");
     const [speed, setSpeed] = useState(1);
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [isScrubbing, setIsScrubbing] = useState(false);
+    const isScrubbingRef = useRef(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
     const thumbnailImgRef = useRef<HTMLImageElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,29 +54,37 @@ const VideoPlayer = () => {
     const volumeSliderRef = useRef<HTMLInputElement>(null);
     const qualityRef = useRef<HTMLElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
-    const isScrubbing = useRef(false);
     const wasPaused = useRef<boolean | undefined>(undefined);
 
-    const {
-        data: thumbnails,
-        isLoading,
-        error,
-    } = useSWR("/test.jpg", imageFetcher);
+    // const { data: thumbnails } = useSWRImmutable("/test.jpg", imageFetcher);
+
+    const thumbnails = useRef<string[]>([]);
 
     //add (qualityList)
     useOutsideClick([qualityRef], () => {});
 
+    // dirty solution to deal with event document event listeners
+    useEffect(() => {
+        isScrubbingRef.current = isScrubbing;
+    }, [isScrubbing]);
+
+    useEffect;
+
     useEffect(() => {
         if (!videoRef.current) return;
+        getThumbnails("/test.jpg").then((r) => {
+            thumbnails.current = r;
+        });
         // add (default)
         videoRef.current.volume =
             Number(localStorage.getItem("vo-volume")) ?? 0.5;
 
         const handleMouseUp = (e: any) => {
-            if (isScrubbing.current) toggleScrubbing(e);
+            if (isScrubbingRef.current) toggleScrubbing(e);
         };
         const handleMove = (e: any) => {
-            if (isScrubbing.current) handleTimelineUpdate(e);
+            if (isScrubbingRef.current)
+                handleTimelineUpdate(e, isScrubbingRef.current);
         };
         document.addEventListener("mouseup", handleMouseUp);
         document.addEventListener("mousemove", handleMove);
@@ -150,21 +160,26 @@ const VideoPlayer = () => {
     }
 
     function handleTimelineUpdate(
-        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
+        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
+        scrubbing?: boolean
     ) {
+        const timelineContainer = timelineRef.current;
+        const previewImg = previewImgRef.current;
+        const thumbnailImg = thumbnailImgRef.current;
+
+        if (!timelineContainer) return;
+        if (!previewImg) return;
+        if (!thumbnailImg) return;
+        if (!thumbnails) return;
+
         let x = 0;
         if ("touches" in e) {
             x = e.targetTouches[0].pageX;
         } else if ("pageX" in e) {
             x = e.pageX;
         }
-        const timelineContainer = timelineRef.current;
-        const previewImg = previewImgRef.current;
-        const thumbnailImg = thumbnailImgRef.current;
-        if (!timelineContainer) return;
-        if (!previewImg) return;
-        if (!thumbnailImg) return;
-        if (!thumbnails) return;
+
+        const doScrubbing = scrubbing || isScrubbing;
 
         const rect = timelineContainer.getBoundingClientRect();
 
@@ -173,10 +188,10 @@ const VideoPlayer = () => {
 
         //thumbnail image
         if (thumbnails) {
-            const previewImgSrc = thumbnails[Math.floor(percent * 100)];
+            const previewImgSrc = thumbnails.current[Math.floor(percent * 100)];
             if (previewImgSrc) {
                 previewImgRef.current.src = previewImgSrc;
-                if (isScrubbing.current) {
+                if (doScrubbing) {
                     thumbnailImgRef.current.src = previewImgSrc;
                 }
             }
@@ -196,7 +211,7 @@ const VideoPlayer = () => {
             previewPercent.toString()
         );
 
-        if (isScrubbing.current) {
+        if (doScrubbing) {
             if (x) e.preventDefault();
             timelineContainer.style.setProperty(
                 "--progress-position",
@@ -216,15 +231,18 @@ const VideoPlayer = () => {
         const percent =
             Math.min(Math.max(0, e.pageX - rect.x), rect.width) / rect.width;
 
-        isScrubbing.current = (e.buttons & 1) === 1;
-        if (isScrubbing.current) {
+        const scrubbingValue = (e.buttons & 1) === 1;
+
+        if (scrubbingValue) {
             wasPaused.current = video.paused;
             pauseVideo();
         } else {
             video.currentTime = percent * video.duration;
             if (wasPaused.current === false) await playVideo();
         }
-        handleTimelineUpdate(e);
+
+        handleTimelineUpdate(e, scrubbingValue);
+        setIsScrubbing(scrubbingValue);
     }
 
     async function handleTouchStartScrubbing(e: TouchEvent<HTMLDivElement>) {
@@ -240,7 +258,7 @@ const VideoPlayer = () => {
                 Math.max(0, e.targetTouches[0].pageX - rect.x),
                 rect.width
             ) / rect.width;
-        isScrubbing.current = true;
+        setIsScrubbing(true);
 
         document.ontouchmove = function () {
             percent =
@@ -257,7 +275,9 @@ const VideoPlayer = () => {
         document.ontouchend = document.ontouchcancel = async function () {
             video.currentTime = percent * video.duration;
             if (wasPaused.current === false) await playVideo();
-            isScrubbing.current = false;
+
+            setIsScrubbing(false);
+
             //remove event listeners
             document.ontouchend =
                 document.ontouchcancel =
@@ -359,8 +379,6 @@ const VideoPlayer = () => {
         setPaused(true);
     }
 
-    console.log(isScrubbing.current);
-
     return (
         <div className="grow p-4 pb-0">
             <div
@@ -391,13 +409,13 @@ const VideoPlayer = () => {
                 <img
                     ref={thumbnailImgRef}
                     className={`${
-                        isScrubbing.current ? "block" : "hidden"
+                        isScrubbing ? "block" : "hidden"
                     } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
                 ></img>
                 {/* .video-controls-container */}
                 <div
                     className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
-                        wasPaused.current ? "opacity-100" : ""
+                        videoRef.current?.paused ? "opacity-100" : ""
                     }`}
                 >
                     {/* .timeline-container */}
@@ -411,15 +429,13 @@ const VideoPlayer = () => {
                         {/* .timeline */}
                         <div
                             className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
-                                isScrubbing.current
-                                    ? "before:block"
-                                    : "before:hidden"
+                                isScrubbing ? "before:block" : "before:hidden"
                             } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-700 after:z-[1]`}
                         >
                             <img
                                 ref={previewImgRef}
                                 className={`preview-img ${
-                                    isScrubbing.current ? "block" : "hidden"
+                                    isScrubbing ? "block" : "hidden"
                                 } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
                             />
                             <div

@@ -249,7 +249,7 @@ const VideoPlayer = () => {
         if (loading) return;
         video.paused ? await playVideo() : pauseVideo();
     }
-    // Volume
+    // volume
     function handleSliderInput(e: ChangeEvent<HTMLInputElement>) {
         const video = videoRef.current;
         if (!video) return;
@@ -280,7 +280,7 @@ const VideoPlayer = () => {
         }
         localStorage.setItem("vo-volume", volumeSliderRef.current.value);
     }
-    // Full screen button
+    // full screen button
     function handleFullScreen() {
         const videoPlayer = document.getElementById("video-player");
         if (!videoPlayer) return;
@@ -314,7 +314,7 @@ const VideoPlayer = () => {
             videoPlayer.msRequestFullscreen();
         }
     }
-    // Speed Button
+    // playback speed Button
     function handleSpeed() {
         const video = videoRef.current;
         if (!video) return;
@@ -400,6 +400,7 @@ const VideoPlayer = () => {
                     onClick={handleVideoClick}
                     onVolumeChange={handleVolumeChange}
                 ></video>
+                {/* loading indicator */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                     <div
                         className={`${
@@ -407,19 +408,20 @@ const VideoPlayer = () => {
                         }  animate-spin w-12 h-12 border-4 border-solid border-b-transparent rounded-full`}
                     ></div>
                 </div>
+                {/* thumbnail image */}
                 <img
                     ref={thumbnailImgRef}
                     className={`${
                         isScrubbing ? "block" : "hidden"
                     } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
                 ></img>
-                {/* .video-controls-container */}
+                {/* video controls container */}
                 <div
                     className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
                         videoRef.current?.paused ? "opacity-100" : ""
                     }`}
                 >
-                    {/* .timeline-container */}
+                    {/* timeline container */}
                     <div
                         ref={timelineRef}
                         className="group/timeline h-4 ms-2 me-2 cursor-pointer flex items-end"
@@ -427,33 +429,37 @@ const VideoPlayer = () => {
                         onMouseDown={toggleScrubbing}
                         onTouchStart={handleTouchStartScrubbing}
                     >
-                        {/* .timeline */}
+                        {/* timeline */}
                         <div
                             className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
                                 isScrubbing ? "before:block" : "before:hidden"
                             } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-700 after:z-[1]`}
                         >
+                            {/* preview image */}
                             <img
                                 ref={previewImgRef}
                                 className={`preview-img ${
                                     isScrubbing ? "block" : "hidden"
                                 } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
                             />
+                            {/* thumb */}
                             <div
                                 className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-purple-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
                             ></div>
+                            {/* buffered timeline */}
                             <div
                                 ref={bufferedRef}
                                 className="absolute top-0 bottom-0 h-full bg-white opacity-50"
                             ></div>
                         </div>
                     </div>
-                    {/* .controls */}
+                    {/* controls */}
                     <div className="flex gap-2 p-1 items-center">
-                        {/* playPauseBtn */}
+                        {/* play/pause button */}
                         <ControlButton onClick={handleVideoClick}>
                             {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
                         </ControlButton>
+                        {/* volume icon */}
                         <div className="flex items-center hover:flex group/vol">
                             <ControlButton onClick={handleMute}>
                                 {volumeLevel === "high" ? (
@@ -464,7 +470,7 @@ const VideoPlayer = () => {
                                     <VolumeMutedIcon />
                                 )}
                             </ControlButton>
-                            {/* .volume-slider */}
+                            {/* volume slider */}
                             <input
                                 ref={volumeSliderRef}
                                 type="range"
@@ -475,6 +481,7 @@ const VideoPlayer = () => {
                                 onChange={handleSliderInput}
                             ></input>
                         </div>
+                        {/* current time / total time */}
                         <div className="flex items-center gap-1 flex-grow">
                             <div>{time}</div>/
                             <div>
@@ -483,6 +490,7 @@ const VideoPlayer = () => {
                                     : "0:00"}
                             </div>
                         </div>
+                        {/* playback speed */}
                         <ControlButton
                             className="w-12 text-lg"
                             title="Playback speed"
@@ -515,6 +523,7 @@ const VideoPlayer = () => {
                             </ul>
                         </div>
                         {/* add 50% opacity to icon if embed */}
+                        {/* full screen button */}
                         <ControlButton onClick={handleFullScreen}>
                             {isFullScreen ? (
                                 <VideoFullClose />

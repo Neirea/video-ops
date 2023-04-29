@@ -55,6 +55,7 @@ function getCanvasBlobUrl(canvas: HTMLCanvasElement): Promise<string> {
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob!);
+
             resolve(url);
         });
     });

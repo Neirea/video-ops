@@ -52,6 +52,9 @@ li {
 .volume-slider:hover::-moz-range-thumb {
     opacity: 1;
 }
+.preview-img {
+    left: calc(var(--preview-position) * 100%);
+}
 .thumb-indicator {
     left: calc(var(--progress-position) * 100%);
 }

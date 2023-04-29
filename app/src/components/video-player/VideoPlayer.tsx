@@ -17,6 +17,8 @@ import ControlButton from "./ControlButton";
 import VideoFullClose from "../icons/VideoFullClose";
 import VideoFullOpen from "../icons/VideoFullOpen";
 import formatDuration from "@/utils/formatDuration";
+import useSWR from "swr";
+import getThumbnails from "@/utils/getThumbnails";
 
 //type support for different browsers
 declare global {
@@ -33,8 +35,9 @@ declare global {
     }
 }
 
+const imageFetcher = (url: string) => getThumbnails(url);
+
 const VideoPlayer = () => {
-    const [thumbnails, setThumbnails] = useState<string[]>([]);
     const [previewImg, setPreviewImg] = useState("");
     const [loading, setLoading] = useState(false);
     const [paused, setPaused] = useState(true);
@@ -43,6 +46,7 @@ const VideoPlayer = () => {
     const [speed, setSpeed] = useState(1);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
+    const thumbnailImgRef = useRef<HTMLImageElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const bufferedRef = useRef<HTMLDivElement>(null);
     const volumeSliderRef = useRef<HTMLInputElement>(null);
@@ -50,6 +54,12 @@ const VideoPlayer = () => {
     const timelineRef = useRef<HTMLDivElement>(null);
     const isScrubbing = useRef(false);
     const wasPaused = useRef<boolean | undefined>(undefined);
+
+    const {
+        data: thumbnails,
+        isLoading,
+        error,
+    } = useSWR("/test.jpg", imageFetcher);
 
     //add (qualityList)
     useOutsideClick([qualityRef], () => {});
@@ -150,17 +160,27 @@ const VideoPlayer = () => {
         }
         const timelineContainer = timelineRef.current;
         const previewImg = previewImgRef.current;
+        const thumbnailImg = thumbnailImgRef.current;
         if (!timelineContainer) return;
         if (!previewImg) return;
+        if (!thumbnailImg) return;
+        if (!thumbnails) return;
 
         const rect = timelineContainer.getBoundingClientRect();
 
         const percent =
             Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
-        //thumbnail image
-        const previewImgSrc = thumbnails[percent];
 
-        if (previewImgSrc) setPreviewImg(previewImgSrc);
+        //thumbnail image
+        if (thumbnails) {
+            const previewImgSrc = thumbnails[Math.floor(percent * 100)];
+            if (previewImgSrc) {
+                previewImgRef.current.src = previewImgSrc;
+                if (isScrubbing.current) {
+                    thumbnailImgRef.current.src = previewImgSrc;
+                }
+            }
+        }
 
         const previewX =
             x + previewImg.offsetWidth / 2 > rect.right
@@ -178,7 +198,6 @@ const VideoPlayer = () => {
 
         if (isScrubbing.current) {
             if (x) e.preventDefault();
-            if (previewImgSrc) setPreviewImg(previewImgSrc);
             timelineContainer.style.setProperty(
                 "--progress-position",
                 percent.toString()
@@ -340,6 +359,8 @@ const VideoPlayer = () => {
         setPaused(true);
     }
 
+    console.log(isScrubbing.current);
+
     return (
         <div className="grow p-4 pb-0">
             <div
@@ -367,7 +388,12 @@ const VideoPlayer = () => {
                         }  animate-spin w-12 h-12 border-4 border-solid border-b-transparent rounded-full`}
                     ></div>
                 </div>
-                <img className="hidden absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50"></img>
+                <img
+                    ref={thumbnailImgRef}
+                    className={`${
+                        isScrubbing.current ? "block" : "hidden"
+                    } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
+                ></img>
                 {/* .video-controls-container */}
                 <div
                     className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
@@ -392,7 +418,9 @@ const VideoPlayer = () => {
                         >
                             <img
                                 ref={previewImgRef}
-                                className="hidden absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white"
+                                className={`preview-img ${
+                                    isScrubbing.current ? "block" : "hidden"
+                                } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
                             />
                             <div
                                 className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-purple-500 rounded-full transition-transform aspect-[1/1] z-[2]`}

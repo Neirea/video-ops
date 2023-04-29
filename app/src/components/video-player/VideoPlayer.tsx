@@ -42,7 +42,7 @@ const VideoPlayer = () => {
     const [time, setTime] = useState("0:00");
     const [volumeLevel, setVolumeLevel] = useState("high");
     const [speed, setSpeed] = useState(1);
-    const [quality, setQuality] = useState(1080);
+    const [quality, setQuality] = useState<number>();
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
     const isScrubbingRef = useRef(false);
@@ -52,27 +52,28 @@ const VideoPlayer = () => {
     const bufferedRef = useRef<HTMLDivElement>(null);
     const volumeSliderRef = useRef<HTMLInputElement>(null);
     const qualityRef = useRef<HTMLDivElement>(null);
-    const qualityBtnRef = useRef<HTMLButtonElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
     const wasPaused = useRef<boolean | undefined>(undefined);
     const thumbnails = useRef<string[]>([]);
 
     const qualityList = [480, 720, 1080];
-
-    //add (qualityList)
     useOutsideClick([qualityRef], () => {
         setPopup(false);
     });
 
     useEffect(() => {
-        if (!videoRef.current) return;
+        const video = videoRef.current;
+        if (!video) return;
+
+        // thumbnails (add)
         getThumbnails("/test.jpg").then((r) => {
             thumbnails.current = r;
         });
         // add (default)
-        videoRef.current.volume =
-            Number(localStorage.getItem("vo-volume")) ?? 0.5;
+        setQuality(Number(localStorage.getItem("vo-quality")) || 1080);
+        video.volume = Number(localStorage.getItem("vo-volume")) ?? 0.5;
 
+        // event listeners to track scrubbing off the video element
         const handleMouseUp = (e: any) => {
             if (isScrubbingRef.current) toggleScrubbing(e);
         };
@@ -93,7 +94,7 @@ const VideoPlayer = () => {
         setIsScrubbing(value);
         isScrubbingRef.current = value;
     }
-
+    // intial setup on video data loaded
     async function handleLoadedData() {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
@@ -106,14 +107,16 @@ const VideoPlayer = () => {
             "--progress-position"
         );
         video.currentTime = Number(percent) * video.duration;
+        // if video was not paused before -> play it
         if (wasPaused.current === false) await playVideo();
     }
+    // update displayed time
     function handleTimeUpdate() {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
-        if (isNaN(video.duration)) return;
+        if (loading) return;
         setTime(formatDuration(video.currentTime));
         const percent = video.currentTime / video.duration;
 
@@ -124,46 +127,13 @@ const VideoPlayer = () => {
 
         updateBufferRange();
     }
-    // buffered range
-    function updateBufferRange() {
-        const video = videoRef.current;
-        if (!video) return;
-        const bufferRange = video.buffered;
-        const bufferedSegment = bufferedRef.current;
-        if (!bufferedSegment) return;
-        if (bufferRange.length === 0) {
-            bufferedSegment.style.left = "0%";
-            bufferedSegment.style.width = "100%";
-            return;
-        }
-        // check current position of playback
-        let bufferIndex = bufferRange.start(0);
-        for (let i = 0; i < bufferRange.length; i++) {
-            if (
-                video.currentTime >= bufferRange.start(i) &&
-                video.currentTime < bufferRange.end(i)
-            ) {
-                bufferIndex = i;
-            }
-        }
-        const bufferedStart = bufferRange.start(bufferIndex);
-        const bufferedEnd = bufferRange.end(bufferIndex);
-        const bufferedWidth = `${
-            ((bufferedEnd - bufferedStart) / video.duration) * 100
-        }%`;
-
-        bufferedSegment.style.left = `${
-            (bufferedStart / video.duration) * 100
-        }%`;
-        bufferedSegment.style.width = bufferedWidth;
-    }
-
+    // update timeline
     function handleTimelineUpdate(
         e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
     ) {
-        const timelineContainer = timelineRef.current;
         const previewImg = previewImgRef.current;
         const thumbnailImg = thumbnailImgRef.current;
+        const timelineContainer = timelineRef.current;
 
         if (!timelineContainer) return;
         if (!previewImg) return;
@@ -178,9 +148,7 @@ const VideoPlayer = () => {
         }
 
         const scrubbing = isScrubbingRef.current;
-
         const rect = timelineContainer.getBoundingClientRect();
-
         const percent =
             Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
 
@@ -194,7 +162,6 @@ const VideoPlayer = () => {
                 }
             }
         }
-
         const previewX =
             x + previewImg.offsetWidth / 2 > rect.right
                 ? rect.right - previewImg.offsetWidth / 2
@@ -203,12 +170,10 @@ const VideoPlayer = () => {
                 : x;
         const previewPercent =
             Math.min(Math.max(0, previewX - rect.x), rect.width) / rect.width;
-
         timelineContainer.style.setProperty(
             "--preview-position",
             previewPercent.toString()
         );
-
         if (scrubbing) {
             if (x) e.preventDefault();
             timelineContainer.style.setProperty(
@@ -217,21 +182,19 @@ const VideoPlayer = () => {
             );
         }
     }
-
+    // scrubbing via mouse
     async function toggleScrubbing(e: MouseEvent<HTMLDivElement>) {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
-        if (isNaN(video.duration)) return;
-        const rect = timelineContainer.getBoundingClientRect();
+        if (loading) return;
 
+        const rect = timelineContainer.getBoundingClientRect();
         const percent =
             Math.min(Math.max(0, e.pageX - rect.x), rect.width) / rect.width;
-
         const scrubbing = (e.buttons & 1) === 1;
         updateIsScrubbing(scrubbing);
-
         if (scrubbing) {
             wasPaused.current = video.paused;
             pauseVideo();
@@ -239,17 +202,16 @@ const VideoPlayer = () => {
             video.currentTime = percent * video.duration;
             if (wasPaused.current === false) await playVideo();
         }
-
         handleTimelineUpdate(e);
     }
-
+    // scrubbing via touchpad
     async function handleTouchStartScrubbing(e: TouchEvent<HTMLDivElement>) {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
         if (e.targetTouches.length > 1) return;
-        if (isNaN(video.duration)) return;
+        if (loading) return;
         const rect = timelineContainer.getBoundingClientRect();
         let percent =
             Math.min(
@@ -264,18 +226,14 @@ const VideoPlayer = () => {
                     Math.max(0, e.targetTouches[0].pageX - rect.x),
                     rect.width
                 ) / rect.width;
-
             wasPaused.current = video.paused;
             pauseVideo();
             handleTimelineUpdate(e);
         };
-
         document.ontouchend = document.ontouchcancel = async function () {
             video.currentTime = percent * video.duration;
             if (wasPaused.current === false) await playVideo();
-
             updateIsScrubbing(false);
-
             //remove event listeners
             document.ontouchend =
                 document.ontouchcancel =
@@ -284,24 +242,45 @@ const VideoPlayer = () => {
         };
     }
 
-    async function handleClick() {
-        if (!videoRef.current) return;
+    /* EVENT HANDLERS */
+    async function handleVideoClick() {
         const video = videoRef.current;
-        if (isNaN(video.duration)) return;
+        if (!video) return;
+        if (loading) return;
         video.paused ? await playVideo() : pauseVideo();
     }
-
+    // Volume
     function handleSliderInput(e: ChangeEvent<HTMLInputElement>) {
-        if (!videoRef.current) return;
+        const video = videoRef.current;
+        if (!video) return;
         const value = +e.target.value;
-        videoRef.current.volume = value;
-        videoRef.current.muted = value === 0;
+        video.volume = value;
+        video.muted = value === 0;
     }
     function handleMute() {
-        if (!videoRef.current) return;
-        videoRef.current.muted = !videoRef.current.muted;
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = !video.muted;
     }
+    function handleVolumeChange(e: SyntheticEvent<HTMLVideoElement>) {
+        const video = e.currentTarget;
+        if (!volumeSliderRef?.current) return;
+        volumeSliderRef.current.value = video.volume.toString();
+        volumeSliderRef.current.style.background = `linear-gradient(90deg, white ${
+            video.volume * 100
+        }%, rgb(120 113 108 / 0.5) 0%)`;
 
+        if (video.muted || video.volume === 0) {
+            volumeSliderRef.current.value = "0";
+            setVolumeLevel("muted");
+        } else if (video.volume >= 0.5) {
+            setVolumeLevel("high");
+        } else {
+            setVolumeLevel("low");
+        }
+        localStorage.setItem("vo-volume", volumeSliderRef.current.value);
+    }
+    // Full screen button
     function handleFullScreen() {
         const videoPlayer = document.getElementById("video-player");
         if (!videoPlayer) return;
@@ -335,26 +314,7 @@ const VideoPlayer = () => {
             videoPlayer.msRequestFullscreen();
         }
     }
-
-    function handleVolumeChange(e: SyntheticEvent<HTMLVideoElement>) {
-        const video = e.currentTarget;
-        if (!volumeSliderRef?.current) return;
-        volumeSliderRef.current.value = video.volume.toString();
-        volumeSliderRef.current.style.background = `linear-gradient(90deg, white ${
-            video.volume * 100
-        }%, rgb(120 113 108 / 0.5) 0%)`;
-
-        if (video.muted || video.volume === 0) {
-            volumeSliderRef.current.value = "0";
-            setVolumeLevel("muted");
-        } else if (video.volume >= 0.5) {
-            setVolumeLevel("high");
-        } else {
-            setVolumeLevel("low");
-        }
-        localStorage.setItem("vo-volume", volumeSliderRef.current.value);
-    }
-
+    // Speed Button
     function handleSpeed() {
         const video = videoRef.current;
         if (!video) return;
@@ -364,30 +324,61 @@ const VideoPlayer = () => {
         setSpeed(newPlaybackRate);
         localStorage.setItem("vo-speed", newPlaybackRate.toString());
     }
-
+    // quality select one of the list items
+    function handleQualitySelect(i: number) {
+        const video = videoRef.current;
+        if (!video) return;
+        wasPaused.current = video.paused;
+        localStorage.setItem("vo-quality", i.toString());
+        setQuality(i);
+        setPopup(false);
+    }
+    /* UTILITY FUNCTIONS */
     async function playVideo() {
+        const video = videoRef.current;
         try {
-            await videoRef.current?.play();
+            await video?.play();
             setPaused(false);
         } catch (error) {}
     }
 
     function pauseVideo() {
-        videoRef.current?.pause();
+        const video = videoRef.current;
+        video?.pause();
         setPaused(true);
     }
-
-    function handleQualitySelect(i: number) {
+    function updateBufferRange() {
         const video = videoRef.current;
         if (!video) return;
-        wasPaused.current = video.paused;
-        // change quality
-        // ....add
-        setQuality(i);
-        setPopup(false);
-    }
+        const bufferRange = video.buffered;
+        const bufferedSegment = bufferedRef.current;
+        if (!bufferedSegment) return;
+        if (bufferRange.length === 0) {
+            bufferedSegment.style.left = "0%";
+            bufferedSegment.style.width = "100%";
+            return;
+        }
+        // check current position of playback
+        let bufferIndex = bufferRange.start(0);
+        for (let i = 0; i < bufferRange.length; i++) {
+            if (
+                video.currentTime >= bufferRange.start(i) &&
+                video.currentTime < bufferRange.end(i)
+            ) {
+                bufferIndex = i;
+            }
+        }
+        const bufferedStart = bufferRange.start(bufferIndex);
+        const bufferedEnd = bufferRange.end(bufferIndex);
+        const bufferedWidth = `${
+            ((bufferedEnd - bufferedStart) / video.duration) * 100
+        }%`;
 
-    console.log(popup);
+        bufferedSegment.style.left = `${
+            (bufferedStart / video.duration) * 100
+        }%`;
+        bufferedSegment.style.width = bufferedWidth;
+    }
 
     return (
         <div className="grow p-4 pb-0 order-1 lg:order-2">
@@ -406,7 +397,7 @@ const VideoPlayer = () => {
                             setLoading(true);
                     }}
                     onPlaying={() => setLoading(false)}
-                    onClick={handleClick}
+                    onClick={handleVideoClick}
                     onVolumeChange={handleVolumeChange}
                 ></video>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -460,7 +451,7 @@ const VideoPlayer = () => {
                     {/* .controls */}
                     <div className="flex gap-2 p-1 items-center">
                         {/* playPauseBtn */}
-                        <ControlButton onClick={handleClick}>
+                        <ControlButton onClick={handleVideoClick}>
                             {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
                         </ControlButton>
                         <div className="flex items-center hover:flex group/vol">

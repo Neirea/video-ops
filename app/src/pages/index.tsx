@@ -22,7 +22,7 @@ export default function Home({
             <main
                 className={`flex min-h-{90vh} flex-col lg:flex-row  ${inter.className}`}
             >
-                <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0">
+                <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0 order-2 lg:order-1">
                     <Menu />
                     <UploadedVideos videoNames={videoNames} />
                 </div>

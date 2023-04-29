@@ -18,6 +18,7 @@ import VideoFullClose from "../icons/VideoFullClose";
 import VideoFullOpen from "../icons/VideoFullOpen";
 import formatDuration from "@/utils/formatDuration";
 import getThumbnails from "@/utils/getThumbnails";
+import ListItem from "../ListItem";
 
 //type support for different browsers
 declare global {
@@ -35,11 +36,13 @@ declare global {
 }
 
 const VideoPlayer = () => {
+    const [popup, setPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paused, setPaused] = useState(true);
     const [time, setTime] = useState("0:00");
     const [volumeLevel, setVolumeLevel] = useState("high");
     const [speed, setSpeed] = useState(1);
+    const [quality, setQuality] = useState(1080);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
     const isScrubbingRef = useRef(false);
@@ -48,13 +51,18 @@ const VideoPlayer = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const bufferedRef = useRef<HTMLDivElement>(null);
     const volumeSliderRef = useRef<HTMLInputElement>(null);
-    const qualityRef = useRef<HTMLElement>(null);
+    const qualityRef = useRef<HTMLDivElement>(null);
+    const qualityBtnRef = useRef<HTMLButtonElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
     const wasPaused = useRef<boolean | undefined>(undefined);
     const thumbnails = useRef<string[]>([]);
 
+    const qualityList = [480, 720, 1080];
+
     //add (qualityList)
-    useOutsideClick([qualityRef], () => {});
+    useOutsideClick([qualityRef], () => {
+        setPopup(false);
+    });
 
     useEffect(() => {
         if (!videoRef.current) return;
@@ -369,8 +377,20 @@ const VideoPlayer = () => {
         setPaused(true);
     }
 
+    function handleQualitySelect(i: number) {
+        const video = videoRef.current;
+        if (!video) return;
+        wasPaused.current = video.paused;
+        // change quality
+        // ....add
+        setQuality(i);
+        setPopup(false);
+    }
+
+    console.log(popup);
+
     return (
-        <div className="grow p-4 pb-0">
+        <div className="grow p-4 pb-0 order-1 lg:order-2">
             <div
                 id={"video-player"}
                 className="relative w-full flex bg-none group/video"
@@ -445,7 +465,6 @@ const VideoPlayer = () => {
                         </ControlButton>
                         <div className="flex items-center hover:flex group/vol">
                             <ControlButton onClick={handleMute}>
-                                {/* add */}
                                 {volumeLevel === "high" ? (
                                     <VolumeHighIcon />
                                 ) : volumeLevel === "low" ? (
@@ -481,7 +500,29 @@ const VideoPlayer = () => {
                             {speed}x
                         </ControlButton>
                         {/* list of video qualities */}
-                        <div className="relative min-w-[4rem]"></div>
+                        <div className="relative min-w-[4rem]" ref={qualityRef}>
+                            <ControlButton
+                                className="w-full"
+                                title="Video resolution"
+                                onClick={() => setPopup((prev) => !prev)}
+                            >
+                                {quality}p
+                            </ControlButton>
+                            <ul
+                                className={`${
+                                    popup ? "block" : "hidden"
+                                } absolute text-center -top-28 bg-stone-900/50 leading-6`}
+                            >
+                                {qualityList.map((i, idx) => (
+                                    <ListItem
+                                        key={`li-${idx}`}
+                                        onClick={() => handleQualitySelect(i)}
+                                    >
+                                        {i}p
+                                    </ListItem>
+                                ))}
+                            </ul>
+                        </div>
                         {/* add 50% opacity to icon if embed */}
                         <ControlButton onClick={handleFullScreen}>
                             {isFullScreen ? (

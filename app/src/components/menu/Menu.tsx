@@ -147,6 +147,7 @@ const Menu = () => {
         };
         fileReader.readAsArrayBuffer(file);
     }
+
     return (
         <>
             <Heading>
@@ -154,7 +155,7 @@ const Menu = () => {
             </Heading>
             <form
                 onSubmit={handleSubmit}
-                className="flex flex-col items-center gap-2"
+                className="flex flex-col items-center gap-4"
             >
                 <FormInput value={token} handleInput={handleTokenInput}>
                     Enter your token
@@ -169,11 +170,18 @@ const Menu = () => {
                 >
                     Choose File
                 </FileInput>
-                <div className="min-h-[24px]">{selectedFile?.name}</div>
-                <Button type="submit" disabled={isUploading}>
+                {/* selected file name */}
+                <div className="min-h-[1.5rem] max-w-[90%] text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
+                    {selectedFile?.name}
+                </div>
+                <Button type="submit" disabled={isUploading || !selectedFile}>
                     Read & Upload
                 </Button>
             </form>
+            {/* current status */}
+            <div className="min-h-[1.5rem] max-w-[90%] text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
+                {status}
+            </div>
         </>
     );
 };

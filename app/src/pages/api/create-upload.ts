@@ -1,13 +1,41 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { Token } from "@/models/Token";
+import CustomError from "@/utils/CustomError";
+import { CreateMultipartUploadCommand, S3Client } from "@aws-sdk/client-s3";
+import { NextApiRequest, NextApiResponse } from "next";
 
-type Data = {
-  name: string
-}
+const BUCKET_NAME = process.env.GCP_RAW_BUCKET!;
+//api for multipart upload
+const bucketClient = new S3Client({
+    endpoint: "https://storage.googleapis.com",
+    credentials: {
+        accessKeyId: process.env.GCP_ACCESS_KEY!,
+        secretAccessKey: process.env.GCP_SECRET_ACCESS_KEY!,
+    },
+    region: process.env.GCP_BUCKET_REGION!,
+});
 
-export default function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
+export default async function handler(
+    req: NextApiRequest,
+    res: NextApiResponse
 ) {
-  res.status(200).json({ name: 'John Doe' })
+    if (req.method === "POST") {
+        const token = req.headers["token"] as string;
+        const tokens = await Token.find({ charges: { $gte: 1 } });
+        if (!tokens.map((i) => i.token).includes(token)) {
+            throw new CustomError("Access Denied", 403);
+        }
+        const name = req.body.name;
+        const command = new CreateMultipartUploadCommand({
+            Bucket: BUCKET_NAME,
+            Key: name,
+        });
+
+        const { UploadId, Key } = await bucketClient.send(command);
+
+        res.json({ UploadId, Key });
+    } else {
+        res.status(404).json({
+            msg: "This method doesn't exist on this route",
+        });
+    }
 }

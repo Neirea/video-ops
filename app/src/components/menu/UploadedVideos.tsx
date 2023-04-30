@@ -1,5 +1,6 @@
 import { VideoType } from "@/models/Video";
 import HeadingTwo from "../HeadingTwo";
+import Link from "next/link";
 
 const UploadedVideos = ({ videoNames }: { videoNames: VideoType[] }) => {
     return (
@@ -9,7 +10,7 @@ const UploadedVideos = ({ videoNames }: { videoNames: VideoType[] }) => {
                 {videoNames.map((i) => {
                     return (
                         <li key={i._id.toString()} className="my-1 text-xl">
-                            {i.name}
+                            <Link href={`/video/${i.url}`}>{i.name}</Link>
                         </li>
                     );
                 })}

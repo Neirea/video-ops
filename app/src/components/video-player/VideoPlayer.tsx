@@ -35,7 +35,13 @@ declare global {
     }
 }
 
-const VideoPlayer = () => {
+const VideoPlayer = ({
+    type,
+    id,
+}: {
+    type: "normal" | "embed";
+    id: string;
+}) => {
     const [popup, setPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paused, setPaused] = useState(true);
@@ -62,17 +68,14 @@ const VideoPlayer = () => {
     });
 
     useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+        setLoading(true);
+    }, [id, quality]);
 
-        // thumbnails (add)
-        getThumbnails("/test.jpg").then((r) => {
+    useEffect(() => {
+        // thumbnails
+        getThumbnails(id).then((r) => {
             thumbnails.current = r;
         });
-        // add (default)
-        setQuality(Number(localStorage.getItem("vo-quality")) || 1080);
-        video.volume = Number(localStorage.getItem("vo-volume")) ?? 0.5;
-
         // event listeners to track scrubbing off the video element
         const handleMouseUp = (e: any) => {
             if (isScrubbingRef.current) toggleScrubbing(e);
@@ -82,6 +85,12 @@ const VideoPlayer = () => {
         };
         document.addEventListener("mouseup", handleMouseUp);
         document.addEventListener("mousemove", handleMove);
+
+        // add (default)
+        setQuality(Number(localStorage.getItem("vo-quality")) || 1080);
+        const video = videoRef.current;
+        if (!video) return;
+        video.volume = Number(localStorage.getItem("vo-volume")) ?? 0.5;
 
         return () => {
             document.removeEventListener("mouseup", handleMouseUp);
@@ -116,8 +125,9 @@ const VideoPlayer = () => {
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
+        if (!video.duration) return;
         if (loading) return;
-        setTime(formatDuration(video.currentTime));
+        setTime(formatDuration(video.currentTime) || "0:00");
         const percent = video.currentTime / video.duration;
 
         timelineContainer.style.setProperty(
@@ -138,7 +148,7 @@ const VideoPlayer = () => {
         if (!timelineContainer) return;
         if (!previewImg) return;
         if (!thumbnailImg) return;
-        if (!thumbnails) return;
+        if (!thumbnails.current) return;
 
         let x = 0;
         if ("touches" in e) {
@@ -153,7 +163,7 @@ const VideoPlayer = () => {
             Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
 
         //thumbnail image
-        if (thumbnails) {
+        if (thumbnails.current) {
             const previewImgSrc = thumbnails.current[Math.floor(percent * 100)];
             if (previewImgSrc) {
                 previewImgRef.current.src = previewImgSrc;
@@ -188,12 +198,14 @@ const VideoPlayer = () => {
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
+        if (!video.duration) return;
         if (loading) return;
 
         const rect = timelineContainer.getBoundingClientRect();
         const percent =
             Math.min(Math.max(0, e.pageX - rect.x), rect.width) / rect.width;
         const scrubbing = (e.buttons & 1) === 1;
+
         updateIsScrubbing(scrubbing);
         if (scrubbing) {
             wasPaused.current = video.paused;
@@ -211,6 +223,7 @@ const VideoPlayer = () => {
         if (!video) return;
         if (!timelineContainer) return;
         if (e.targetTouches.length > 1) return;
+        if (!video.duration) return;
         if (loading) return;
         const rect = timelineContainer.getBoundingClientRect();
         let percent =
@@ -246,6 +259,7 @@ const VideoPlayer = () => {
     async function handleVideoClick() {
         const video = videoRef.current;
         if (!video) return;
+        if (!video.duration) return;
         if (loading) return;
         video.paused ? await playVideo() : pauseVideo();
     }
@@ -326,25 +340,22 @@ const VideoPlayer = () => {
     }
     // quality select one of the list items
     function handleQualitySelect(i: number) {
-        const video = videoRef.current;
-        if (!video) return;
-        wasPaused.current = video.paused;
+        if (!videoRef.current) return;
+        wasPaused.current = videoRef.current.paused;
         localStorage.setItem("vo-quality", i.toString());
         setQuality(i);
         setPopup(false);
     }
     /* UTILITY FUNCTIONS */
     async function playVideo() {
-        const video = videoRef.current;
         try {
-            await video?.play();
+            await videoRef.current?.play();
             setPaused(false);
         } catch (error) {}
     }
 
     function pauseVideo() {
-        const video = videoRef.current;
-        video?.pause();
+        videoRef.current?.pause();
         setPaused(true);
     }
     function updateBufferRange() {
@@ -380,158 +391,150 @@ const VideoPlayer = () => {
         bufferedSegment.style.width = bufferedWidth;
     }
 
+    if (!quality) return null;
+
     return (
-        <div className="grow p-4 pb-0 order-1 lg:order-2">
-            <div
-                id={"video-player"}
-                className="relative w-full flex bg-none group/video"
-            >
-                <video
-                    ref={videoRef}
-                    src="/test1.mp4"
-                    className="w-full aspect-video"
-                    onLoadedData={handleLoadedData}
-                    onTimeUpdate={handleTimeUpdate}
-                    onWaiting={() => {
-                        if (videoRef.current && !videoRef.current.seeking)
-                            setLoading(true);
-                    }}
-                    onPlaying={() => setLoading(false)}
-                    onClick={handleVideoClick}
-                    onVolumeChange={handleVolumeChange}
-                ></video>
-                {/* loading indicator */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div
-                        className={`${
-                            loading ? "block" : "hidden"
-                        }  animate-spin w-12 h-12 border-4 border-solid border-b-transparent rounded-full`}
-                    ></div>
-                </div>
-                {/* thumbnail image */}
-                <img
-                    ref={thumbnailImgRef}
-                    className={`${
-                        isScrubbing ? "block" : "hidden"
-                    } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
-                ></img>
-                {/* video controls container */}
+        <div
+            id={"video-player"}
+            className="relative w-full flex bg-none group/video"
+        >
+            <video
+                ref={videoRef}
+                src={`/api/video?v=${id}&q=${quality}`}
+                className="w-full aspect-video"
+                onLoadedData={handleLoadedData}
+                onTimeUpdate={handleTimeUpdate}
+                onPlaying={() => setLoading(false)}
+                onClick={handleVideoClick}
+                onVolumeChange={handleVolumeChange}
+            ></video>
+            {/* loading indicator */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div
-                    className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
-                        videoRef.current?.paused ? "opacity-100" : ""
-                    }`}
+                    className={`${
+                        loading ? "block" : "hidden"
+                    }  animate-spin w-12 h-12 border-4 border-solid border-b-transparent rounded-full`}
+                ></div>
+            </div>
+            {/* thumbnail image */}
+            <img
+                ref={thumbnailImgRef}
+                className={`${
+                    isScrubbing ? "block" : "hidden"
+                } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
+            ></img>
+            {/* video controls container */}
+            <div
+                className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                    videoRef.current?.paused ? "opacity-100" : ""
+                }`}
+            >
+                {/* timeline container */}
+                <div
+                    ref={timelineRef}
+                    className="group/timeline h-4 ms-2 me-2 cursor-pointer flex items-end"
+                    onMouseMove={handleTimelineUpdate}
+                    onMouseDown={toggleScrubbing}
+                    onTouchStart={handleTouchStartScrubbing}
                 >
-                    {/* timeline container */}
+                    {/* timeline */}
                     <div
-                        ref={timelineRef}
-                        className="group/timeline h-4 ms-2 me-2 cursor-pointer flex items-end"
-                        onMouseMove={handleTimelineUpdate}
-                        onMouseDown={toggleScrubbing}
-                        onTouchStart={handleTouchStartScrubbing}
+                        className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
+                            isScrubbing ? "before:block" : "before:hidden"
+                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-700 after:z-[1]`}
                     >
-                        {/* timeline */}
+                        {/* preview image */}
+                        <img
+                            ref={previewImgRef}
+                            className={`preview-img ${
+                                isScrubbing ? "block" : "hidden"
+                            } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
+                        />
+                        {/* thumb */}
                         <div
-                            className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
-                                isScrubbing ? "before:block" : "before:hidden"
-                            } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-700 after:z-[1]`}
-                        >
-                            {/* preview image */}
-                            <img
-                                ref={previewImgRef}
-                                className={`preview-img ${
-                                    isScrubbing ? "block" : "hidden"
-                                } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
-                            />
-                            {/* thumb */}
-                            <div
-                                className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-purple-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
-                            ></div>
-                            {/* buffered timeline */}
-                            <div
-                                ref={bufferedRef}
-                                className="absolute top-0 bottom-0 h-full bg-white opacity-50"
-                            ></div>
-                        </div>
+                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-purple-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
+                        ></div>
+                        {/* buffered timeline */}
+                        <div
+                            ref={bufferedRef}
+                            className="absolute top-0 bottom-0 h-full bg-white opacity-50"
+                        ></div>
                     </div>
-                    {/* controls */}
-                    <div className="flex gap-2 p-1 items-center">
-                        {/* play/pause button */}
-                        <ControlButton onClick={handleVideoClick}>
-                            {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
-                        </ControlButton>
-                        {/* volume icon */}
-                        <div className="flex items-center hover:flex group/vol">
-                            <ControlButton onClick={handleMute}>
-                                {volumeLevel === "high" ? (
-                                    <VolumeHighIcon />
-                                ) : volumeLevel === "low" ? (
-                                    <VolumeLowIcon />
-                                ) : (
-                                    <VolumeMutedIcon />
-                                )}
-                            </ControlButton>
-                            {/* volume slider */}
-                            <input
-                                ref={volumeSliderRef}
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="any"
-                                className="volume-slider w-[1px] h-[0.3rem] origin-left scale-x-0 transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100"
-                                onChange={handleSliderInput}
-                            ></input>
-                        </div>
-                        {/* current time / total time */}
-                        <div className="flex items-center gap-1 flex-grow">
-                            <div>{time}</div>/
-                            <div>
-                                {videoRef.current
-                                    ? formatDuration(videoRef.current.duration)
-                                    : "0:00"}
-                            </div>
-                        </div>
-                        {/* playback speed */}
-                        <ControlButton
-                            className="w-12 text-lg"
-                            title="Playback speed"
-                            onClick={handleSpeed}
-                        >
-                            {speed}x
-                        </ControlButton>
-                        {/* list of video qualities */}
-                        <div className="relative min-w-[4rem]" ref={qualityRef}>
-                            <ControlButton
-                                className="w-full"
-                                title="Video resolution"
-                                onClick={() => setPopup((prev) => !prev)}
-                            >
-                                {quality}p
-                            </ControlButton>
-                            <ul
-                                className={`${
-                                    popup ? "block" : "hidden"
-                                } absolute text-center -top-28 bg-stone-900/50 leading-6`}
-                            >
-                                {qualityList.map((i, idx) => (
-                                    <ListItem
-                                        key={`li-${idx}`}
-                                        onClick={() => handleQualitySelect(i)}
-                                    >
-                                        {i}p
-                                    </ListItem>
-                                ))}
-                            </ul>
-                        </div>
-                        {/* add 50% opacity to icon if embed */}
-                        {/* full screen button */}
-                        <ControlButton onClick={handleFullScreen}>
-                            {isFullScreen ? (
-                                <VideoFullClose />
+                </div>
+                {/* controls */}
+                <div className="flex gap-2 p-1 items-center">
+                    {/* play/pause button */}
+                    <ControlButton onClick={handleVideoClick}>
+                        {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
+                    </ControlButton>
+                    {/* volume icon */}
+                    <div className="flex items-center hover:flex group/vol">
+                        <ControlButton onClick={handleMute}>
+                            {volumeLevel === "high" ? (
+                                <VolumeHighIcon />
+                            ) : volumeLevel === "low" ? (
+                                <VolumeLowIcon />
                             ) : (
-                                <VideoFullOpen />
+                                <VolumeMutedIcon />
                             )}
                         </ControlButton>
+                        {/* volume slider */}
+                        <input
+                            ref={volumeSliderRef}
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="any"
+                            className="volume-slider w-[1px] h-[0.3rem] origin-left scale-x-0 transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100"
+                            onChange={handleSliderInput}
+                        ></input>
                     </div>
+                    {/* current time / total time */}
+                    <div className="flex items-center gap-1 flex-grow">
+                        <div>{time}</div>/
+                        <div>
+                            {videoRef.current?.duration
+                                ? formatDuration(videoRef.current.duration)
+                                : "0:00"}
+                        </div>
+                    </div>
+                    {/* playback speed */}
+                    <ControlButton
+                        className="w-12 text-lg"
+                        title="Playback speed"
+                        onClick={handleSpeed}
+                    >
+                        {speed}x
+                    </ControlButton>
+                    {/* list of video qualities */}
+                    <div className="relative min-w-[4rem]" ref={qualityRef}>
+                        <ControlButton
+                            className="w-full"
+                            title="Video resolution"
+                            onClick={() => setPopup((prev) => !prev)}
+                        >
+                            {quality}p
+                        </ControlButton>
+                        <ul
+                            className={`${
+                                popup ? "block" : "hidden"
+                            } absolute text-center -top-28 bg-stone-900/50 leading-6`}
+                        >
+                            {qualityList.map((i, idx) => (
+                                <ListItem
+                                    key={`li-${idx}`}
+                                    onClick={() => handleQualitySelect(i)}
+                                >
+                                    {i}p
+                                </ListItem>
+                            ))}
+                        </ul>
+                    </div>
+                    {/* add 50% opacity to icon if embed */}
+                    {/* full screen button */}
+                    <ControlButton onClick={handleFullScreen}>
+                        {isFullScreen ? <VideoFullClose /> : <VideoFullOpen />}
+                    </ControlButton>
                 </div>
             </div>
         </div>

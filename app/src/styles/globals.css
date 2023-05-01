@@ -10,7 +10,6 @@ html,
 body {
     margin: 0;
     padding: 0;
-    /* overflow: clip; */
 }
 
 body {
@@ -27,7 +26,6 @@ li {
     margin: 0;
     padding: 0;
 }
-
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -58,8 +56,13 @@ li {
 .thumb-indicator {
     left: calc(var(--progress-position) * 100%);
 }
-
 .timeline::after,
 .timeline::before {
     right: calc(100% - var(--progress-position) * 100%);
+}
+
+@media (max-width: 560px) {
+    * {
+        font-size: 2.85vw;
+    }
 }

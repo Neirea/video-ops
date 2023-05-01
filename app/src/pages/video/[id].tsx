@@ -57,8 +57,11 @@ const VideoPage = ({
     return (
         <>
             <Head>
-                <title>{currentVideo.name}</title>
-                {/* add: metatags and stuff */}
+                <title>{currentVideo.name} - Video Ops</title>
+                <meta
+                    name="description"
+                    content={`${currentVideo.name} - uploaded video by Video Ops`}
+                />
             </Head>
             <main
                 className={`flex min-h-{90vh} flex-col lg:flex-row  ${inter.className}`}

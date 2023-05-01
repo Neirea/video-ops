@@ -53,6 +53,7 @@ const VideoPlayer = ({
     const [quality, setQuality] = useState<number>();
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
+    const [delayedScrubbing, setDelayedScrubbing] = useState(false);
     const isScrubbingRef = useRef(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
     const thumbnailImgRef = useRef<HTMLImageElement>(null);
@@ -72,6 +73,21 @@ const VideoPlayer = ({
     useEffect(() => {
         setLoading(true);
     }, [video.url, quality]);
+
+    useEffect(() => {
+        let timeout: NodeJS.Timeout | undefined;
+        if (isScrubbing) {
+            timeout = setTimeout(() => {
+                setDelayedScrubbing(isScrubbing);
+            }, 300);
+        } else {
+            setDelayedScrubbing(isScrubbing);
+            if (timeout) clearTimeout(timeout);
+        }
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, [isScrubbing]);
 
     useEffect(() => {
         // thumbnails
@@ -487,7 +503,7 @@ const VideoPlayer = ({
             <img
                 ref={thumbnailImgRef}
                 className={`${
-                    isScrubbing ? "block" : "hidden"
+                    delayedScrubbing ? "block" : "hidden"
                 } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
             ></img>
             {/* video controls container */}

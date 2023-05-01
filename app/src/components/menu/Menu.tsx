@@ -155,9 +155,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 setIsTranscoding(true);
                 setStage(1);
                 //create websocket connection
-                const socket = new WebSocket(
-                    "wss://video-process-app.up.railway.app/"
-                );
+                const socket = new WebSocket(process.env.WS_URL!);
                 socket.addEventListener("open", () => {
                     socket.send(
                         JSON.stringify({

@@ -71,7 +71,7 @@ const VideoPlayer = ({
 
     useEffect(() => {
         setLoading(true);
-    }, [video, quality]);
+    }, [video.url, quality]);
 
     useEffect(() => {
         // thumbnails

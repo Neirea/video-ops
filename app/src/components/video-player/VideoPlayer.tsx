@@ -141,7 +141,7 @@ const VideoPlayer = ({
     function handleLoadStart() {
         const video = videoRef.current;
         if (!video) return;
-        video.playbackRate = Number(localStorage.getItem("vo-speed")) ?? 1;
+        video.playbackRate = Number(localStorage.getItem("vo-speed")) || 1;
         setTime(formatDuration(video.currentTime));
         setSpeed(video.playbackRate);
     }

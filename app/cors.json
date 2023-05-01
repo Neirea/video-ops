@@ -1,9 +1,6 @@
 [
     {
-        "origin": [
-            "http://localhost:3000",
-            "https://video-streaming-demo.up.railway.app"
-        ],
+        "origin": ["http://localhost:3000", "https://video-ops.vercel.app/"],
         "method": ["GET", "PUT", "DELETE"],
         "responseHeader": ["*"],
         "maxAgeSeconds": 3600

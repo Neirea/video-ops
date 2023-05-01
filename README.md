@@ -1,6 +1,6 @@
 # Video Ops
 
-### [App flow video](https://video-streaming-demo.up.railway.app/?v=MDg5YzRiMT)
+### [App flow video](https://video-ops.vercel.app/video/MDg5YzRiMT)
 
 This is project for uploading videos, processing them into 480p, 720p and 1080p.  
 Once uploaded, you can watch them in custom-made player or embed into other website as iframe.

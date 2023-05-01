@@ -9,7 +9,7 @@ import Menu from "@/components/menu/Menu";
 import UploadedVideos from "@/components/menu/UploadedVideos";
 import VideoPlayer from "@/components/video-player/VideoPlayer";
 import getIframeLink from "../../utils/getIframeLink";
-import { useEffect, useState } from "react";
+import { useEffect, useState, MouseEvent } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +18,8 @@ const VideoPage = ({
 }: InferGetServerSidePropsType<typeof getServerSideProps>) => {
     const router = useRouter();
     const [origin, setOrigin] = useState("");
-    const videoId = router.query.id as string;
+    const videoId = router.query.id as string | undefined;
+    const [videos, setVideos] = useState(videoNames);
 
     const currentVideo = videoNames.find((i) => i.url == videoId);
 
@@ -29,7 +30,30 @@ const VideoPage = ({
         }
     }, []);
 
-    if (!currentVideo) return null;
+    function handleLinkSelect(e: MouseEvent) {
+        const selection = window.getSelection();
+        if (!selection) return;
+        const range = document.createRange();
+        range.selectNodeContents(e.target as Node);
+        const stringRange = range.toString().trim();
+
+        selection.removeAllRanges();
+        if (selection.toString() != stringRange) {
+            selection.addRange(range);
+        }
+    }
+    function handleLinkBlur() {
+        window.getSelection()?.removeAllRanges();
+    }
+    async function fetchVideos() {
+        const { videoNames } = await fetch("/api/videos").then((res) =>
+            res.json()
+        );
+
+        setVideos(videoNames);
+    }
+
+    if (!currentVideo || !videoId) return null;
     return (
         <>
             <Head>
@@ -40,16 +64,20 @@ const VideoPage = ({
                 className={`flex min-h-{90vh} flex-col lg:flex-row  ${inter.className}`}
             >
                 <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0 order-2 lg:order-1">
-                    <Menu />
-                    <UploadedVideos videoNames={videoNames} />
+                    <Menu fetchVideos={fetchVideos} />
+                    <UploadedVideos videoNames={videos} />
                 </div>
                 <div className="grow p-4 pb-0 order-1 lg:order-2">
-                    <VideoPlayer type="normal" id={videoId} />
+                    <VideoPlayer key={videoId} type="normal" id={videoId} />
                     <h3 className="text-2xl font-semibold my-2 mx-0 self-start"></h3>
                     {origin && (
                         <div className="flex align-center w-full gap-2">
                             <label className="shrink-0">Embedded video:</label>
-                            <div className="text-base text-white bg-none border-b-2 border-solid border-stone-500/50 resize-none">
+                            <div
+                                className="text-base text-white bg-none border-b-2 border-solid border-stone-500/50 resize-none"
+                                onClick={handleLinkSelect}
+                                onBlur={handleLinkBlur}
+                            >
                                 {getIframeLink(origin, currentVideo.url)}
                             </div>
                         </div>

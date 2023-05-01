@@ -20,11 +20,11 @@ export default async function handler(
     res: NextApiResponse
 ) {
     if (req.method === "POST") {
-        const token = req.headers["token"] as string;
-        const tokens = await Token.find({ charges: { $gte: 1 } });
-        if (!tokens.map((i) => i.token).includes(token)) {
-            throw new CustomError("Access Denied", 403);
-        }
+        // const token = req.headers["token"] as string;
+        // const tokens = await Token.find({ charges: { $gte: 1 } });
+        // if (!tokens.map((i) => i.token).includes(token)) {
+        //     throw new CustomError("Access Denied", 403);
+        // }
         const { Key, UploadId, parts } = req.body;
         const promises = [];
 

@@ -20,11 +20,11 @@ export default async function handler(
     res: NextApiResponse
 ) {
     if (req.method === "POST") {
-        const token = req.headers["token"] as string;
-        const tokens = await Token.find({ charges: { $gte: 1 } });
-        if (!tokens.map((i) => i.token).includes(token)) {
-            throw new CustomError("Access Denied", 403);
-        }
+        // const token = req.headers["token"] as string;
+        // const tokens = await Token.find({ charges: { $gte: 1 } });
+        // if (!tokens.map((i) => i.token).includes(token)) {
+        //     throw new CustomError("Access Denied", 403);
+        // }
         const { Key, UploadId, parts } = req.body;
 
         const command = new CompleteMultipartUploadCommand({
@@ -38,10 +38,10 @@ export default async function handler(
         await bucketClient.send(command);
 
         //decrement until 0
-        await Token.updateOne(
-            { token: token, charges: { $gte: 1 } },
-            { $inc: { charges: -1 } }
-        );
+        // await Token.updateOne(
+        //     { token: token, charges: { $gte: 1 } },
+        //     { $inc: { charges: -1 } }
+        // );
         res.json({ success: true });
     } else {
         res.status(404).json({

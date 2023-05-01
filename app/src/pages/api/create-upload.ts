@@ -19,20 +19,11 @@ export default async function handler(
     res: NextApiResponse
 ) {
     if (req.method === "POST") {
-        console.log("starting create-upload");
-
-        const token = req.headers["token"] as string;
-        try {
-            const tokens = await Token.find({ charges: { $gte: 1 } });
-            if (!tokens.map((i) => i.token).includes(token)) {
-                throw new CustomError("Access Denied", 403);
-            }
-        } catch (error) {
-            console.log(error);
-        }
-
-        console.log("received tokens");
-
+        // const token = req.headers["token"] as string;
+        // const tokens = await Token.find({ charges: { $gte: 1 } });
+        // if (!tokens.map((i) => i.token).includes(token)) {
+        //     throw new CustomError("Access Denied", 403);
+        // }
         const name = req.body.name;
         const command = new CreateMultipartUploadCommand({
             Bucket: BUCKET_NAME,
@@ -40,7 +31,6 @@ export default async function handler(
         });
 
         const { UploadId, Key } = await bucketClient.send(command);
-        console.log("finished");
 
         res.json({ UploadId, Key });
     } else {

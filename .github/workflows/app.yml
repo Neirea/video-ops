@@ -9,9 +9,6 @@ on:
         paths-ignore:
             - "video-process-app/**"
             - README.md
-defaults:
-    run:
-        working-directory: ./app
 jobs:
     Deploy-Production:
         runs-on: ubuntu-latest

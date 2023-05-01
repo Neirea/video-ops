@@ -26,7 +26,7 @@ Once uploaded, you can watch them in custom-made player or embed into other webs
 
 ## Technologies:
 
--   Frontend: vanilla html, css and javascript
--   Servers: Node.js (express), FFmpeg, MongoDB
+-   App: Next.js, MongoDB
+-   Video processing: Node.js, FFMpeg
 -   Google Cloud Storage and Pub/Sub
--   Deployed on Railway
+-   Deployed on Vercel and Railway

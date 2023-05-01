@@ -1,24 +1,26 @@
+import { useOutsideClick } from "@/hooks/useOutsideClick";
+import formatDuration from "@/utils/formatDuration";
+import getThumbnails from "@/utils/getThumbnails";
 import {
     ChangeEvent,
-    SyntheticEvent,
     MouseEvent,
+    SyntheticEvent,
     TouchEvent,
     useEffect,
     useRef,
     useState,
 } from "react";
-import { useOutsideClick } from "@/hooks/useOutsideClick";
+import deleteImages from "../../utils/deleteImages";
+import ListItem from "../ListItem";
+import VideoFullClose from "../icons/VideoFullClose";
+import VideoFullOpen from "../icons/VideoFullOpen";
+import VideoPausedIcon from "../icons/VideoPausedIcon";
+import VideoPlayIcon from "../icons/VideoPlayIcon";
 import VolumeHighIcon from "../icons/VolumeHighIcon";
 import VolumeLowIcon from "../icons/VolumeLowIcon";
 import VolumeMutedIcon from "../icons/VolumeMutedIcon";
-import VideoPausedIcon from "../icons/VideoPausedIcon";
-import VideoPlayIcon from "../icons/VideoPlayIcon";
 import ControlButton from "./ControlButton";
-import VideoFullClose from "../icons/VideoFullClose";
-import VideoFullOpen from "../icons/VideoFullOpen";
-import formatDuration from "@/utils/formatDuration";
-import getThumbnails from "@/utils/getThumbnails";
-import ListItem from "../ListItem";
+import { VideoType } from "@/models/Video";
 
 //type support for different browsers
 declare global {
@@ -37,10 +39,10 @@ declare global {
 
 const VideoPlayer = ({
     type,
-    id,
+    video,
 }: {
     type: "normal" | "embed";
-    id: string;
+    video: VideoType;
 }) => {
     const [popup, setPopup] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -69,11 +71,11 @@ const VideoPlayer = ({
 
     useEffect(() => {
         setLoading(true);
-    }, [id, quality]);
+    }, [video, quality]);
 
     useEffect(() => {
         // thumbnails
-        getThumbnails(id).then((r) => {
+        getThumbnails(video.url).then((r) => {
             thumbnails.current = r;
         });
         // event listeners to track scrubbing off the video element
@@ -83,18 +85,50 @@ const VideoPlayer = ({
         const handleMove = (e: any) => {
             if (isScrubbingRef.current) handleTimelineUpdate(e);
         };
+        const keyboardHandler = (e: KeyboardEvent) => {
+            const tagName = document.activeElement?.tagName.toLowerCase();
+
+            if (tagName === "input") return;
+
+            switch (e.key.toLowerCase()) {
+                case " ":
+                    if (tagName === "button") return;
+                case "k":
+                    togglePlay();
+                    break;
+                case "m":
+                    toggleMute();
+                    break;
+                case "arrowleft":
+                case "j":
+                    skip(-5);
+                    break;
+                case "arrowright":
+                case "l":
+                    skip(5);
+                    break;
+            }
+        };
+        if (type === "normal") {
+            document.addEventListener("keydown", keyboardHandler);
+        }
         document.addEventListener("mouseup", handleMouseUp);
         document.addEventListener("mousemove", handleMove);
 
         // add (default)
         setQuality(Number(localStorage.getItem("vo-quality")) || 1080);
-        const video = videoRef.current;
-        if (!video) return;
-        video.volume = Number(localStorage.getItem("vo-volume")) ?? 0.5;
-
+        if (videoRef.current) {
+            videoRef.current.volume =
+                Number(localStorage.getItem("vo-volume")) ?? 0.5;
+        }
         return () => {
+            // delete blobs
+            deleteImages(thumbnails.current);
             document.removeEventListener("mouseup", handleMouseUp);
             document.removeEventListener("mousemove", handleMove);
+            if (type === "normal") {
+                document.removeEventListener("keydown", keyboardHandler);
+            }
         };
     }, []);
 
@@ -103,15 +137,21 @@ const VideoPlayer = ({
         setIsScrubbing(value);
         isScrubbingRef.current = value;
     }
+    //
+    function handleLoadStart() {
+        const video = videoRef.current;
+        if (!video) return;
+        video.playbackRate = Number(localStorage.getItem("vo-speed")) ?? 1;
+        setTime(formatDuration(video.currentTime));
+        setSpeed(video.playbackRate);
+    }
     // intial setup on video data loaded
     async function handleLoadedData() {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
         if (!video) return;
         if (!timelineContainer) return;
-        video.playbackRate = Number(localStorage.getItem("vo-speed")) ?? 1;
         setLoading(false);
-        setSpeed(video.playbackRate);
         const percent = timelineContainer.style.getPropertyValue(
             "--progress-position"
         );
@@ -254,7 +294,6 @@ const VideoPlayer = ({
                     null;
         };
     }
-
     /* EVENT HANDLERS */
     async function handleVideoClick() {
         const video = videoRef.current;
@@ -353,10 +392,22 @@ const VideoPlayer = ({
             setPaused(false);
         } catch (error) {}
     }
-
     function pauseVideo() {
         videoRef.current?.pause();
         setPaused(true);
+    }
+    async function togglePlay() {
+        if (!videoRef.current) return;
+        if (!videoRef.current.duration) return;
+        videoRef.current.paused ? await playVideo() : pauseVideo();
+    }
+    function toggleMute() {
+        if (!videoRef.current) return;
+        videoRef.current.muted = !videoRef.current.muted;
+    }
+    function skip(duration: number) {
+        if (!videoRef.current) return;
+        videoRef.current.currentTime += duration;
     }
     function updateBufferRange() {
         const video = videoRef.current;
@@ -398,10 +449,26 @@ const VideoPlayer = ({
             id={"video-player"}
             className="relative w-full flex bg-none group/video"
         >
+            {type === "embed" && (
+                <div
+                    className={`absolute left-0 top-0 right-0 text-white z-50 opacity-0 transition-opacity before:content-[''] before:absolute before:top-0 before:w-full before:-z-10 before:pointer-events-none before:bg-gradient-to-b before:from-black/75 before:to-transparent before:aspect-[3/1] group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                        videoRef.current?.paused ? "opacity-100" : ""
+                    }`}
+                >
+                    <a
+                        className="block mt-2 ml-4 text-xl text-white no-underline cursor-pointer opacity-[0.85] hover:opacity-100"
+                        href={`/video/${video.url}`}
+                        target="_blank"
+                    >
+                        {video.name}
+                    </a>
+                </div>
+            )}
             <video
                 ref={videoRef}
-                src={`/api/video?v=${id}&q=${quality}`}
+                src={`/api/video?v=${video.url}&q=${quality}`}
                 className="w-full aspect-video"
+                onLoadStart={handleLoadStart}
                 onLoadedData={handleLoadedData}
                 onTimeUpdate={handleTimeUpdate}
                 onPlaying={() => setLoading(false)}
@@ -441,7 +508,7 @@ const VideoPlayer = ({
                     <div
                         className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
                             isScrubbing ? "before:block" : "before:hidden"
-                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-700 after:z-[1]`}
+                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-500 after:z-[1]`}
                     >
                         {/* preview image */}
                         <img
@@ -452,7 +519,7 @@ const VideoPlayer = ({
                         />
                         {/* thumb */}
                         <div
-                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-purple-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
+                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-violet-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
                         ></div>
                         {/* buffered timeline */}
                         <div
@@ -530,9 +597,11 @@ const VideoPlayer = ({
                             ))}
                         </ul>
                     </div>
-                    {/* add 50% opacity to icon if embed */}
                     {/* full screen button */}
-                    <ControlButton onClick={handleFullScreen}>
+                    <ControlButton
+                        onClick={handleFullScreen}
+                        disabled={type === "embed"}
+                    >
                         {isFullScreen ? <VideoFullClose /> : <VideoFullOpen />}
                     </ControlButton>
                 </div>

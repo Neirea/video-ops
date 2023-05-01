@@ -68,7 +68,11 @@ const VideoPage = ({
                     <UploadedVideos videoNames={videos} />
                 </div>
                 <div className="grow p-4 pb-0 order-1 lg:order-2">
-                    <VideoPlayer key={videoId} type="normal" id={videoId} />
+                    <VideoPlayer
+                        key={videoId}
+                        type="normal"
+                        video={currentVideo}
+                    />
                     <h3 className="text-2xl font-semibold my-2 mx-0 self-start"></h3>
                     {origin && (
                         <div className="flex align-center w-full gap-2">

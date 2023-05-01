@@ -19,8 +19,12 @@ export default async function handler(
     res: NextApiResponse
 ) {
     if (req.method === "POST") {
+        console.log("starting create-upload");
+
         const token = req.headers["token"] as string;
         const tokens = await Token.find({ charges: { $gte: 1 } });
+        console.log("received tokens");
+
         if (!tokens.map((i) => i.token).includes(token)) {
             throw new CustomError("Access Denied", 403);
         }
@@ -31,6 +35,7 @@ export default async function handler(
         });
 
         const { UploadId, Key } = await bucketClient.send(command);
+        console.log("finished");
 
         res.json({ UploadId, Key });
     } else {

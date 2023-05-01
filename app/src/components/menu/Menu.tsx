@@ -55,6 +55,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
 
             if (isSuccess) {
                 setIsUploading(true);
+                setStatus("Initializing upload");
                 const reqProgress: {
                     total: number;
                     items: { loaded?: number }[];

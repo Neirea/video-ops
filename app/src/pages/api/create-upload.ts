@@ -22,12 +22,17 @@ export default async function handler(
         console.log("starting create-upload");
 
         const token = req.headers["token"] as string;
-        const tokens = await Token.find({ charges: { $gte: 1 } });
+        try {
+            const tokens = await Token.find({ charges: { $gte: 1 } });
+            if (!tokens.map((i) => i.token).includes(token)) {
+                throw new CustomError("Access Denied", 403);
+            }
+        } catch (error) {
+            console.log(error);
+        }
+
         console.log("received tokens");
 
-        if (!tokens.map((i) => i.token).includes(token)) {
-            throw new CustomError("Access Denied", 403);
-        }
         const name = req.body.name;
         const command = new CreateMultipartUploadCommand({
             Bucket: BUCKET_NAME,

@@ -13,6 +13,6 @@ const TokenSchema = new Schema({
     },
 });
 
-const Token = models.Token || model("Key", TokenSchema);
+const Token = models.Key || model("Key", TokenSchema);
 
 export { Token };

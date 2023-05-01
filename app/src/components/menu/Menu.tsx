@@ -5,21 +5,25 @@ import Button from "../Button";
 import FileInput from "../FileInput";
 import generateShortId from "@/utils/generateShortId";
 import trackedRequest from "@/utils/trackedRequest";
+import Transcoding from "./Transcoding";
 
-const Menu = () => {
+const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [token, setToken] = useState("");
-    const [fileName, setFileName] = useState("");
+    const [fileNameInput, setFileNameInput] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | undefined>();
-    const [isUploading, setIsUploading] = useState<boolean>(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isTranscoding, setIsTranscoding] = useState(false);
     const [status, setStatus] = useState("");
+    const [stage, setStage] = useState(0);
+
+    const isDisabled = isUploading || isTranscoding;
 
     function handleTokenInput(e: ChangeEvent<HTMLInputElement>) {
         setToken(e.target.value);
     }
     function handleFileNameInput(e: ChangeEvent<HTMLInputElement>) {
-        setFileName(e.target.value);
+        setFileNameInput(e.target.value);
     }
-
     function handleSelectedFile(e: ChangeEvent<HTMLInputElement>) {
         if (!e.target.files || !e.target.files.length) {
             setSelectedFile(undefined);
@@ -27,14 +31,14 @@ const Menu = () => {
         }
         // using the first image instead of multiple
         setSelectedFile(e.target.files[0]);
+        if (status) setStatus("");
     }
-
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         const file = selectedFile;
         const fileReader = new FileReader();
 
-        if (fileName.length < 2) return;
+        if (fileNameInput.length < 2) return;
         if (!file) return;
 
         fileReader.onload = async (ev) => {
@@ -57,7 +61,7 @@ const Menu = () => {
                 } = { total: fileSize, items: [] };
 
                 try {
-                    const uploadResult = await fetch("/create-upload", {
+                    const uploadResult = await fetch("/api/create-upload", {
                         method: "POST",
                         headers: {
                             "content-type": "application/json",
@@ -71,18 +75,21 @@ const Menu = () => {
                     const { UploadId, Key } = await uploadResult.json();
 
                     //get urls for client to upload file chunks
-                    const uploadUrlsResult = await fetch("/get-upload-urls", {
-                        method: "POST",
-                        headers: {
-                            "content-type": "application/json",
-                            token: token,
-                        },
-                        body: JSON.stringify({
-                            UploadId,
-                            Key,
-                            parts: chunkCount,
-                        }),
-                    });
+                    const uploadUrlsResult = await fetch(
+                        "/api/get-upload-urls",
+                        {
+                            method: "POST",
+                            headers: {
+                                "content-type": "application/json",
+                                token: token,
+                            },
+                            body: JSON.stringify({
+                                UploadId,
+                                Key,
+                                parts: chunkCount,
+                            }),
+                        }
+                    );
                     if (!uploadUrlsResult.ok)
                         throw await uploadUrlsResult.json();
                     const { parts } = await uploadUrlsResult.json();
@@ -122,7 +129,7 @@ const Menu = () => {
                     });
                     //finish uploading
                     setStatus("Finalizing upload...");
-                    const completeResult = await fetch("/complete-upload", {
+                    const completeResult = await fetch("/api/complete-upload", {
                         method: "POST",
                         headers: {
                             "content-type": "application/json",
@@ -136,13 +143,56 @@ const Menu = () => {
                     });
                     if (!completeResult.ok) throw await completeResult.json();
                     await completeResult.json();
-                } catch (error) {
+                } catch (error: any) {
                     //add: resetUI
-                    setStatus("");
+                    setIsUploading(false);
+                    setStatus(error.message);
                     reqProgress.total = 0;
                     reqProgress.items = [];
                     return;
                 }
+                setIsUploading(false);
+                setIsTranscoding(true);
+                setStage(1);
+                //create websocket connection
+                const socket = new WebSocket(
+                    "wss://video-process-app.up.railway.app/"
+                );
+                socket.addEventListener("open", () => {
+                    socket.send(
+                        JSON.stringify({
+                            type: "upload",
+                            fileName: fileName,
+                            dbName: fileNameInput,
+                        })
+                    );
+                });
+                // picture of uploading
+                socket.addEventListener("message", (event) => {
+                    const { status, msg, name } = JSON.parse(event.data);
+                    switch (status) {
+                        case "checked":
+                            setStage(2);
+                            setStatus(msg);
+                            break;
+                        case "processed":
+                            setStatus(msg + " processed");
+                            if (msg === "1080p") setStage(3);
+                            break;
+                        case "done":
+                            setStatus("Finished transcoding");
+                            setStage(0);
+                            setIsTranscoding(false);
+                            //refetch video list
+                            fetchVideos();
+                            socket.close();
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            } else {
+                setStatus("Wrong file format");
             }
         };
         fileReader.readAsArrayBuffer(file);
@@ -157,16 +207,23 @@ const Menu = () => {
                 onSubmit={handleSubmit}
                 className="flex flex-col items-center gap-4"
             >
-                <FormInput value={token} handleInput={handleTokenInput}>
+                <FormInput
+                    value={token}
+                    handleInput={handleTokenInput}
+                    disabled={isDisabled}
+                >
                     Enter your token
                 </FormInput>
-                <FormInput value={fileName} handleInput={handleFileNameInput}>
+                <FormInput
+                    value={fileNameInput}
+                    handleInput={handleFileNameInput}
+                    disabled={isDisabled}
+                >
                     Enter video name
                 </FormInput>
                 <FileInput
-                    type="button"
                     handleInput={handleSelectedFile}
-                    disabled={isUploading}
+                    disabled={isDisabled}
                 >
                     Choose File
                 </FileInput>
@@ -174,12 +231,19 @@ const Menu = () => {
                 <div className="min-h-[1.5rem] max-w-[90%] text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
                     {selectedFile?.name}
                 </div>
-                <Button type="submit" disabled={isUploading || !selectedFile}>
-                    Read & Upload
-                </Button>
+                {isTranscoding ? (
+                    <Transcoding stage={stage} />
+                ) : (
+                    <Button
+                        type="submit"
+                        disabled={isDisabled || !selectedFile}
+                    >
+                        Read & Upload
+                    </Button>
+                )}
             </form>
             {/* current status */}
-            <div className="min-h-[1.5rem] max-w-[90%] text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
+            <div className="min-h-[1.75rem] max-w-[90%] text-xl text-pink-300 text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
                 {status}
             </div>
         </>

@@ -6,9 +6,8 @@ on:
     push:
         branches:
             - main
-        paths-ignore:
-            - "video-process-app/**"
-            - README.md
+        paths:
+            - "app/**"
 jobs:
     Deploy-Production:
         runs-on: ubuntu-latest

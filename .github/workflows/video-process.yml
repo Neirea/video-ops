@@ -3,9 +3,8 @@ on:
     push:
         branches:
             - main
-        paths-ignore:
-            - "app/**"
-            - README.md
+        paths:
+            - "video-process-app/**"
 defaults:
     run:
         working-directory: ./video-process-app

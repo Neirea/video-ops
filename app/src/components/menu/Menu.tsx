@@ -72,7 +72,9 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                             name: fileName,
                         }),
                     });
-                    if (!uploadResult.ok) throw await uploadResult.json();
+                    if (!uploadResult.ok) {
+                        throw await uploadResult.json();
+                    }
                     const { UploadId, Key } = await uploadResult.json();
 
                     //get urls for client to upload file chunks
@@ -156,7 +158,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 setIsTranscoding(true);
                 setStage(1);
                 //create websocket connection
-                const socket = new WebSocket(process.env.WS_URL!);
+                const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
                 socket.addEventListener("open", () => {
                     socket.send(
                         JSON.stringify({

@@ -1,5 +1,5 @@
+import dbConnect from "@/lib/connect-db";
 import { Token } from "@/models/Token";
-import CustomError from "@/utils/CustomError";
 import { CompleteMultipartUploadCommand, S3Client } from "@aws-sdk/client-s3";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -20,11 +20,13 @@ export default async function handler(
     res: NextApiResponse
 ) {
     if (req.method === "POST") {
-        // const token = req.headers["token"] as string;
-        // const tokens = await Token.find({ charges: { $gte: 1 } });
-        // if (!tokens.map((i) => i.token).includes(token)) {
-        //     throw new CustomError("Access Denied", 403);
-        // }
+        await dbConnect();
+        const token = req.headers["token"] as string;
+        const tokens = await Token.find({ charges: { $gte: 1 } });
+        if (!tokens.map((i) => i.token).includes(token)) {
+            res.status(403).json({ message: "Acess Denied" });
+            return;
+        }
         const { Key, UploadId, parts } = req.body;
 
         const command = new CompleteMultipartUploadCommand({
@@ -37,11 +39,11 @@ export default async function handler(
         });
         await bucketClient.send(command);
 
-        //decrement until 0
-        // await Token.updateOne(
-        //     { token: token, charges: { $gte: 1 } },
-        //     { $inc: { charges: -1 } }
-        // );
+        // decrement until 0
+        await Token.updateOne(
+            { token: token, charges: { $gte: 1 } },
+            { $inc: { charges: -1 } }
+        );
         res.json({ success: true });
     } else {
         res.status(404).json({

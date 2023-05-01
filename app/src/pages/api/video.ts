@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Storage } from "@google-cloud/storage";
-import CustomError from "@/utils/CustomError";
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -19,7 +18,6 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-
     const queryVideo = req.query.v as string;
     const queryQuality = req.query.q as string;
     const videoName = queryQuality
@@ -32,7 +30,10 @@ export default async function handler(
     }
     const file = storage.bucket(process.env.GCP_PROD_BUCKET!).file(videoName);
     const metadata = await file.getMetadata();
-    if (!metadata) throw new CustomError("Content Not Found", 404);
+    if (!metadata) {
+        res.status(404).json({ message: "Video was not found" });
+        return;
+    }
     const videoSize = metadata[0].size;
 
     // Parse Range

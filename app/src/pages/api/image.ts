@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Storage } from "@google-cloud/storage";
-import CustomError from "@/utils/CustomError";
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -24,7 +23,10 @@ export default async function handler(
         .bucket(process.env.GCP_PROD_BUCKET!)
         .file(imgName + ".webp");
     const metadata = await file.getMetadata();
-    if (!metadata) throw new CustomError("Content Not Found", 404);
+    if (!metadata) {
+        res.status(404).json({ message: "Image not found" });
+        return;
+    }
     const imageStream = file.createReadStream();
     res.setHeader("Content-Type", "image/webp");
     imageStream.pipe(res);

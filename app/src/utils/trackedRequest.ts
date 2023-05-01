@@ -15,9 +15,10 @@ export default function trackedRequest(
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (e) => {
             reqProgress.items[idx].loaded = e.loaded;
-            const currentProgress = Object.keys(reqProgress).reduce(
+            const currentProgress = Object.keys(reqProgress.items).reduce(
                 (prev, curr) => {
                     const currNumber = Number(curr);
+
                     if (!isNaN(currNumber)) {
                         return prev + reqProgress.items[currNumber].loaded!;
                     }

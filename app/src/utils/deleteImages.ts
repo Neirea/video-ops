@@ -1,4 +1,4 @@
-function deleteImages(thumbnails: any[]) {
+export default function deleteImages(thumbnails: string[]) {
     if (!thumbnails.length) return;
     thumbnails.forEach((url) => {
         URL.revokeObjectURL(url);

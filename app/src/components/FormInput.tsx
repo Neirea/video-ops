@@ -3,11 +3,13 @@ import { ChangeEvent, useId } from "react";
 type FormInputProps = {
     value: string;
     handleInput: (e: ChangeEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
 };
 
 const FormInput = ({
     value,
     handleInput,
+    disabled,
     children,
 }: React.PropsWithChildren<FormInputProps>) => {
     const id = useId();
@@ -16,9 +18,10 @@ const FormInput = ({
             <label htmlFor={id}>{children}</label>
             <input
                 id={id}
-                className="h-6 w-60 text-xl "
+                className="h-6 w-60 text-xl text-black"
                 value={value}
                 onChange={handleInput}
+                disabled={disabled}
             />
         </div>
     );

@@ -51,7 +51,8 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
             const extension = file.name.split(".").pop()?.toLowerCase();
             //can't do more than 10000 chunks for s3
             const isSuccess = chunkCount <= 10000;
-            const fileName = generateShortId() + `.${extension}`;
+            const fileName =
+                fileNameInput + "@@@" + generateShortId() + `.${extension}`;
 
             if (isSuccess) {
                 setIsUploading(true);
@@ -69,7 +70,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                             token: token,
                         },
                         body: JSON.stringify({
-                            name: fileName,
+                            key: fileName,
                         }),
                     });
                     if (!uploadResult.ok) {
@@ -164,13 +165,12 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                         JSON.stringify({
                             type: "upload",
                             fileName: fileName,
-                            dbName: fileNameInput,
                         })
                     );
                 });
                 // picture of uploading
                 socket.addEventListener("message", (event) => {
-                    const { status, msg, name } = JSON.parse(event.data);
+                    const { status, msg } = JSON.parse(event.data);
                     switch (status) {
                         case "checked":
                             setStage(2);

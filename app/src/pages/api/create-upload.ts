@@ -26,10 +26,10 @@ export default async function handler(
             res.status(403).json({ message: "Acess Denied" });
             return;
         }
-        const name = req.body.name;
+        const key = req.body.key;
         const command = new CreateMultipartUploadCommand({
             Bucket: BUCKET_NAME,
-            Key: name,
+            Key: key,
         });
 
         const { UploadId, Key } = await bucketClient.send(command);

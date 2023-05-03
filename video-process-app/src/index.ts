@@ -14,29 +14,15 @@ import { WebSocket, WebSocketServer } from "ws";
 import errorHandlerMiddleware from "./middleware/error-handle";
 import notFound from "./middleware/not-found";
 import Video from "./model";
+import Bull from "bull";
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
-let wschat: { [key: string]: WebSocket } = {};
-let dbNames: { [key: string]: string } = {};
+type videoFile = { rawName: string };
+const queue: Bull.Queue<videoFile> = new Bull("transcode");
 
-wss.on("connection", (socket) => {
-    socket.on("message", (rawData) => {
-        const data = JSON.parse(rawData.toString());
-        //join room based on fileName
-        if (data.type === "upload" && !wschat[data.fileName]) {
-            wschat[data.fileName] = socket;
-            dbNames[data.fileName] = data.dbName;
-        }
-    });
-});
-
-function sendTo(socketId: string, message: string | Object) {
-    if (wschat[socketId]) {
-        wschat[socketId].send(JSON.stringify(message));
-    }
-}
+let wsChat: { [key: string]: WebSocket } = {};
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -54,8 +40,20 @@ const storage = new Storage({
 const bucket_raw = storage.bucket("raw-video-streaming");
 const bucket_prod = storage.bucket("prod-video-streaming");
 
-mongoose.set("strictQuery", false);
-mongoose.connect(process.env.MONGO_URL!);
+queue.process(async (job) => {
+    const { rawName } = job.data;
+    await processVideo(rawName);
+});
+
+wss.on("connection", (socket) => {
+    socket.on("message", (rawData) => {
+        const data = JSON.parse(rawData.toString());
+        //join room based on fileName
+        if (data.type === "upload" && !wsChat[data.fileName]) {
+            wsChat[data.fileName] = socket;
+        }
+    });
+});
 
 app.set("trust proxy", true);
 
@@ -65,19 +63,47 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         res.status(400).send();
         return;
     }
-    res.status(200).send(); // responding earlier to acknowledge message is received
     // The pub/sub message is a unicode string encoded in base64.
     const data = JSON.parse(
         Buffer.from(req.body.message.data, "base64").toString().trim()
     );
-    const fileName: string = data.name;
-    const urlName = fileName.split(".")[0];
+    //queue up processing
+    queue.add({
+        rawName: data.name,
+    });
+    res.status(200).send();
+});
+
+app.use(notFound);
+app.use(errorHandlerMiddleware);
+
+// Start the server
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    //connect to db
+    mongoose.set("strictQuery", false);
+    mongoose.connect(process.env.MONGO_URL!);
+    console.log(`server is running on port ${PORT}...`);
+});
+
+async function processVideo(rawName: string) {
+    // The pub/sub message is a unicode string encoded in base64.
+    const splitRawName = rawName.split("@@@");
+    if (splitRawName.length !== 2) {
+        sendTo(rawName, {
+            status: "error",
+            msg: "Failed to proceed transcoding",
+        });
+    }
+    const videoName = splitRawName[0];
+    const fileName = splitRawName[1];
+    const urlName = fileName.split(".")[0]; // video_name
     //get file out of storage
-    const file = bucket_raw.file(fileName);
+    const file = bucket_raw.file(rawName);
     //check file size
     const metadata = await file.getMetadata();
     if (metadata[0].size > 2 * 10 ** 9) {
-        sendTo(fileName, {
+        sendTo(rawName, {
             status: "error",
             msg: "File is too big",
         });
@@ -93,7 +119,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     ffprobe(urlName, { path: ffprobeStatic.path }, async (err, info) => {
         const duration = info.streams[0].duration;
         if (err || !duration) {
-            sendTo(fileName, {
+            sendTo(rawName, {
                 status: "error",
                 msg: err.message || "Probe Error",
             });
@@ -103,14 +129,14 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         }
         commandsBatch.push(
             ffmpegScrn(urlName, duration).then((res) => {
-                sendTo(fileName, {
+                sendTo(rawName, {
                     status: "checked",
                     msg: "Thumbnails are generated",
                 });
                 return res;
             })
         );
-        sendTo(fileName, {
+        sendTo(rawName, {
             status: "checked",
             msg: `Video is valid with duration ${Math.trunc(duration)}s`,
         });
@@ -125,7 +151,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     //process files
     commandsBatch.push(
         ffmpegCommand(urlName, height480).then((res) => {
-            sendTo(fileName, {
+            sendTo(rawName, {
                 status: "processed",
                 msg: `${height480}p`,
             });
@@ -134,7 +160,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     );
     commandsBatch.push(
         ffmpegCommand(urlName, height720).then((res) => {
-            sendTo(fileName, {
+            sendTo(rawName, {
                 status: "processed",
                 msg: `${height720}p`,
             });
@@ -143,7 +169,7 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
     );
     commandsBatch.push(
         ffmpegCommand(urlName, height1080).then((res) => {
-            sendTo(fileName, {
+            sendTo(rawName, {
                 status: "processed",
                 msg: `${height1080}p`,
             });
@@ -151,22 +177,22 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         })
     );
     console.log(`Starting transcoding video - ${urlName}`);
+
     try {
         await Promise.all(commandsBatch);
 
         //save it to DB
-        const videoName = dbNames[fileName] || urlName;
         await Video.create({
             name: videoName,
             url: urlName,
         });
-        sendTo(fileName, {
+        sendTo(rawName, {
             status: "done",
             msg: urlName,
             name: videoName,
         });
     } catch (err) {
-        sendTo(fileName, {
+        sendTo(rawName, {
             status: "error",
             msg: (err as Error).message,
         });
@@ -175,16 +201,13 @@ app.post("/pubsub/push", express.json(), async (req, res) => {
         fs.unlink(urlName);
         await file.delete();
     }
-});
+}
 
-app.use(notFound);
-app.use(errorHandlerMiddleware);
-
-// Start the server
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-    console.log(`server is running on port ${PORT}...`);
-});
+function sendTo(socketId: string, message: string | Object) {
+    if (wsChat[socketId]) {
+        wsChat[socketId].send(JSON.stringify(message));
+    }
+}
 
 function ffmpegCommand(input: string, height: number) {
     const width = Math.ceil((height / 9) * 16);

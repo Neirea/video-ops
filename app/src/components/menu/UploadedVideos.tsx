@@ -2,16 +2,12 @@ import { VideoType } from "@/models/Video";
 import HeadingTwo from "../HeadingTwo";
 import Link from "next/link";
 
-const UploadedVideos = ({
-    videoNames,
-}: {
-    videoNames: VideoType[] | undefined;
-}) => {
+const UploadedVideos = ({ videos }: { videos: VideoType[] | undefined }) => {
     return (
         <>
             <HeadingTwo>Uploaded Videos</HeadingTwo>
             <ul>
-                {videoNames?.map((i) => {
+                {videos?.map((i) => {
                     return (
                         <li
                             key={i._id.toString()}

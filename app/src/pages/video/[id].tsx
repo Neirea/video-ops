@@ -6,10 +6,10 @@ import { Video } from "@/models/Video";
 import dbConnect from "@/lib/connect-db";
 import { VideoType } from "@/models/Video";
 import Menu from "@/components/menu/Menu";
-import UploadedVideos from "@/components/menu/UploadedVideos";
 import VideoPlayer from "@/components/video-player/VideoPlayer";
 import getIframeLink from "../../utils/getIframeLink";
 import { useEffect, useState, MouseEvent } from "react";
+import UploadedVideos from "@/components/menu/UploadedVideos";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -64,7 +64,7 @@ const VideoPage = ({
     return (
         <>
             <Head>
-                <title>{currentVideo.name} - Video Ops</title>
+                <title>{`${currentVideo.name} - Video Ops`}</title>
                 <meta
                     name="description"
                     content={`${currentVideo.name} - uploaded video by Video Ops`}
@@ -75,7 +75,7 @@ const VideoPage = ({
             >
                 <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0 order-2 lg:order-1">
                     <Menu fetchVideos={fetchVideos} />
-                    <UploadedVideos videoNames={videos} />
+                    <UploadedVideos videos={videos} />
                 </div>
                 <div className="grow p-4 pb-0 order-1 lg:order-2">
                     <VideoPlayer

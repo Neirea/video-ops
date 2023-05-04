@@ -1,4 +1,6 @@
+import useDelayedValue from "@/hooks/useDelayedValue";
 import { useOutsideClick } from "@/hooks/useOutsideClick";
+import { VideoType } from "@/models/Video";
 import formatDuration from "@/utils/formatDuration";
 import getThumbnails from "@/utils/getThumbnails";
 import {
@@ -20,7 +22,6 @@ import VolumeHighIcon from "../icons/VolumeHighIcon";
 import VolumeLowIcon from "../icons/VolumeLowIcon";
 import VolumeMutedIcon from "../icons/VolumeMutedIcon";
 import ControlButton from "./ControlButton";
-import { VideoType } from "@/models/Video";
 
 //type support for different browsers
 declare global {
@@ -53,7 +54,7 @@ const VideoPlayer = ({
     const [quality, setQuality] = useState<number>();
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
-    const [delayedScrubbing, setDelayedScrubbing] = useState(false);
+    const delayedScrubbing = useDelayedValue(isScrubbing);
     const isScrubbingRef = useRef(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
     const thumbnailImgRef = useRef<HTMLImageElement>(null);
@@ -69,25 +70,6 @@ const VideoPlayer = ({
     useOutsideClick([qualityRef], () => {
         setPopup(false);
     });
-
-    useEffect(() => {
-        setLoading(true);
-    }, [video.url, quality]);
-
-    useEffect(() => {
-        let timeout: NodeJS.Timeout | undefined;
-        if (isScrubbing) {
-            timeout = setTimeout(() => {
-                setDelayedScrubbing(isScrubbing);
-            }, 300);
-        } else {
-            setDelayedScrubbing(isScrubbing);
-            if (timeout) clearTimeout(timeout);
-        }
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, [isScrubbing]);
 
     useEffect(() => {
         // thumbnails
@@ -132,11 +114,7 @@ const VideoPlayer = ({
         document.addEventListener("mousemove", handleMove);
 
         // add (default)
-        setQuality(Number(localStorage.getItem("vo-quality")) || 1080);
-        if (videoRef.current) {
-            videoRef.current.volume =
-                Number(localStorage.getItem("vo-volume")) ?? 0.5;
-        }
+        setQuality(Number(localStorage.getItem("vo-quality") ?? 1080));
         return () => {
             // delete blobs
             deleteImages(thumbnails.current);
@@ -157,7 +135,9 @@ const VideoPlayer = ({
     function handleLoadStart() {
         const video = videoRef.current;
         if (!video) return;
-        video.playbackRate = Number(localStorage.getItem("vo-speed")) || 1;
+        video.volume = Number(localStorage.getItem("vo-volume") ?? 0.5);
+        video.playbackRate = Number(localStorage.getItem("vo-speed") ?? 1);
+        setLoading(true);
         setTime(formatDuration(video.currentTime));
         setSpeed(video.playbackRate);
     }
@@ -168,10 +148,10 @@ const VideoPlayer = ({
         if (!video) return;
         if (!timelineContainer) return;
         setLoading(false);
-        const percent = timelineContainer.style.getPropertyValue(
-            "--progress-position"
+        const percent = Number(
+            timelineContainer.style.getPropertyValue("--progress-position") ?? 0
         );
-        video.currentTime = Number(percent) * video.duration;
+        video.currentTime = percent * video.duration;
         // if video was not paused before -> play it
         if (wasPaused.current === false) await playVideo();
     }

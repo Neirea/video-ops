@@ -129,9 +129,14 @@ const VideoPage = ({
 
 export const getServerSideProps: GetServerSideProps<{
     videoNames: VideoType[];
-}> = async (ctx) => {
+}> = async ({ res }) => {
     await dbConnect();
     const videoNames = await Video.find({});
+
+    res.setHeader(
+        "Cache-Control",
+        "public, s-maxage=10, stale-while-revalidate=59"
+    );
 
     return {
         // workaround to serialize dates

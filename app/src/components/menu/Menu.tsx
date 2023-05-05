@@ -201,9 +201,9 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
 
     return (
         <>
-            <Heading>
-                <a href="/">Video Ops</a>
-            </Heading>
+            <a href="/">
+                <Heading>Video Ops</Heading>
+            </a>
             <form
                 onSubmit={handleSubmit}
                 className="flex flex-col items-center gap-4"

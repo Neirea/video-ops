@@ -1,19 +1,11 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { S3Client, UploadPartCommand } from "@aws-sdk/client-s3";
+import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Token } from "@/models/Token";
 import dbConnect from "@/lib/connect-db";
+import { bucketClient } from "@/utils/storage";
 
 const BUCKET_NAME = process.env.GCP_RAW_BUCKET!;
-//api for multipart upload
-const bucketClient = new S3Client({
-    endpoint: "https://storage.googleapis.com",
-    credentials: {
-        accessKeyId: process.env.GCP_ACCESS_KEY!,
-        secretAccessKey: process.env.GCP_SECRET_ACCESS_KEY!,
-    },
-    region: process.env.GCP_BUCKET_REGION!,
-});
 
 export default async function handler(
     req: NextApiRequest,

@@ -2,7 +2,6 @@ import useDelayedValue from "@/hooks/useDelayedValue";
 import { useOutsideClick } from "@/hooks/useOutsideClick";
 import { VideoType } from "@/models/Video";
 import formatDuration from "@/utils/formatDuration";
-import getThumbnails from "@/utils/getThumbnails";
 import {
     ChangeEvent,
     MouseEvent,
@@ -12,7 +11,6 @@ import {
     useRef,
     useState,
 } from "react";
-import deleteImages from "../../utils/deleteImages";
 import ListItem from "../ListItem";
 import VideoFullClose from "../icons/VideoFullClose";
 import VideoFullOpen from "../icons/VideoFullOpen";
@@ -22,6 +20,7 @@ import VolumeHighIcon from "../icons/VolumeHighIcon";
 import VolumeLowIcon from "../icons/VolumeLowIcon";
 import VolumeMutedIcon from "../icons/VolumeMutedIcon";
 import ControlButton from "./ControlButton";
+import useThumbnails from "@/hooks/useThumbnails";
 
 //type support for different browsers
 declare global {
@@ -41,9 +40,11 @@ declare global {
 const VideoPlayer = ({
     type,
     video,
+    imageUrl,
 }: {
     type: "normal" | "embed";
     video: VideoType;
+    imageUrl: string;
 }) => {
     const [popup, setPopup] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -55,6 +56,7 @@ const VideoPlayer = ({
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
     const delayedScrubbing = useDelayedValue(isScrubbing);
+    const thumbnails = useThumbnails(imageUrl);
     const isScrubbingRef = useRef(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
     const thumbnailImgRef = useRef<HTMLImageElement>(null);
@@ -64,7 +66,6 @@ const VideoPlayer = ({
     const qualityRef = useRef<HTMLDivElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
     const wasPaused = useRef<boolean | undefined>(undefined);
-    const thumbnails = useRef<string[]>([]);
 
     const qualityList = [480, 720, 1080];
     useOutsideClick([qualityRef], () => {
@@ -72,10 +73,6 @@ const VideoPlayer = ({
     });
 
     useEffect(() => {
-        // thumbnails
-        getThumbnails(video.url).then((r) => {
-            thumbnails.current = r;
-        });
         // event listeners to track scrubbing off the video element
         const handleMouseUp = (e: any) => {
             if (isScrubbingRef.current) toggleScrubbing(e);
@@ -116,8 +113,6 @@ const VideoPlayer = ({
         // add (default)
         setQuality(Number(localStorage.getItem("vo-quality") ?? 1080));
         return () => {
-            // delete blobs
-            deleteImages(thumbnails.current);
             document.removeEventListener("mouseup", handleMouseUp);
             document.removeEventListener("mousemove", handleMove);
             if (type === "normal") {
@@ -184,7 +179,6 @@ const VideoPlayer = ({
         if (!timelineContainer) return;
         if (!previewImg) return;
         if (!thumbnailImg) return;
-        if (!thumbnails.current) return;
 
         let x = 0;
         if ("touches" in e) {
@@ -199,13 +193,11 @@ const VideoPlayer = ({
             Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
 
         //thumbnail image
-        if (thumbnails.current) {
-            const previewImgSrc = thumbnails.current[Math.floor(percent * 100)];
-            if (previewImgSrc) {
-                previewImgRef.current.src = previewImgSrc;
-                if (scrubbing) {
-                    thumbnailImgRef.current.src = previewImgSrc;
-                }
+        const previewImgSrc = thumbnails[Math.floor(percent * 100)];
+        if (previewImgSrc) {
+            previewImgRef.current.src = previewImgSrc;
+            if (scrubbing) {
+                thumbnailImgRef.current.src = previewImgSrc;
             }
         }
         const previewX =

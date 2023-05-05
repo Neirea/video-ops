@@ -10,11 +10,13 @@ import VideoPlayer from "@/components/video-player/VideoPlayer";
 import getIframeLink from "../../utils/getIframeLink";
 import { useEffect, useState, MouseEvent } from "react";
 import UploadedVideos from "@/components/menu/UploadedVideos";
+import getImageUrl from "@/utils/getImageUrl";
 
 const inter = Inter({ subsets: ["latin"] });
 
 const VideoPage = ({
     videoNames,
+    imageUrl,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) => {
     const router = useRouter();
     const [origin, setOrigin] = useState("");
@@ -82,6 +84,7 @@ const VideoPage = ({
                         key={videoId}
                         type="normal"
                         video={currentVideo}
+                        imageUrl={imageUrl}
                     />
                     <h3 className="text-2xl font-semibold my-2 mx-0 self-start"></h3>
                     {origin && (
@@ -129,18 +132,23 @@ const VideoPage = ({
 
 export const getServerSideProps: GetServerSideProps<{
     videoNames: VideoType[];
-}> = async ({ res }) => {
+    imageUrl: string;
+}> = async ({ query }) => {
     await dbConnect();
     const videoNames = await Video.find({});
 
-    res.setHeader(
-        "Cache-Control",
-        "public, s-maxage=10, stale-while-revalidate=59"
-    );
+    const videoUrl = query.id as string | undefined;
+    const currentVideo = videoNames.find((i) => i.url === videoUrl);
+    if (!currentVideo) {
+        return {
+            notFound: true,
+        };
+    }
+    const imageUrl = await getImageUrl(currentVideo.url);
 
     return {
-        // workaround to serialize dates
-        props: { videoNames: JSON.parse(JSON.stringify(videoNames)) },
+        // workaround to serialize mongoose object
+        props: { videoNames: JSON.parse(JSON.stringify(videoNames)), imageUrl },
     };
 };
 

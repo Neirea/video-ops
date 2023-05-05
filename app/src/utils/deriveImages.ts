@@ -4,6 +4,7 @@ export default function deriveImages(source: string): Promise<string[]> {
         willReadFrequently: true,
     })!;
     const thumbnailCollage = new Image();
+    thumbnailCollage.crossOrigin = "anonymous";
     thumbnailCollage.src = source;
     return new Promise((resolve, reject) => {
         thumbnailCollage.onload = async function () {

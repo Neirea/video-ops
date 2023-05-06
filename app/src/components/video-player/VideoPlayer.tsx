@@ -21,6 +21,7 @@ import VolumeLowIcon from "../icons/VolumeLowIcon";
 import VolumeMutedIcon from "../icons/VolumeMutedIcon";
 import ControlButton from "./ControlButton";
 import useThumbnails from "@/hooks/useThumbnails";
+import { throttle } from "@/utils/throttle";
 
 //type support for different browsers
 declare global {
@@ -37,6 +38,11 @@ declare global {
     }
 }
 
+const throttleDelay = 25;
+function isTouchDevice() {
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+}
+
 const VideoPlayer = ({
     type,
     video,
@@ -49,6 +55,7 @@ const VideoPlayer = ({
     const [popup, setPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paused, setPaused] = useState(true);
+    const [wasPaused, setWasPaused] = useState<boolean>();
     const [time, setTime] = useState("0:00");
     const [volumeLevel, setVolumeLevel] = useState("high");
     const [speed, setSpeed] = useState(1);
@@ -57,7 +64,6 @@ const VideoPlayer = ({
     const [isScrubbing, setIsScrubbing] = useState(false);
     const delayedScrubbing = useDelayedValue(isScrubbing);
     const thumbnails = useThumbnails(imageUrl);
-    const isScrubbingRef = useRef(false);
     const previewImgRef = useRef<HTMLImageElement>(null);
     const thumbnailImgRef = useRef<HTMLImageElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -65,7 +71,6 @@ const VideoPlayer = ({
     const volumeSliderRef = useRef<HTMLInputElement>(null);
     const qualityRef = useRef<HTMLDivElement>(null);
     const timelineRef = useRef<HTMLDivElement>(null);
-    const wasPaused = useRef<boolean | undefined>(undefined);
 
     const qualityList = [480, 720, 1080];
     useOutsideClick([qualityRef], () => {
@@ -73,13 +78,6 @@ const VideoPlayer = ({
     });
 
     useEffect(() => {
-        // event listeners to track scrubbing off the video element
-        const handleMouseUp = (e: any) => {
-            if (isScrubbingRef.current) toggleScrubbing(e);
-        };
-        const handleMove = (e: any) => {
-            if (isScrubbingRef.current) handleTimelineUpdate(e);
-        };
         const keyboardHandler = (e: KeyboardEvent) => {
             const tagName = document.activeElement?.tagName.toLowerCase();
 
@@ -107,29 +105,46 @@ const VideoPlayer = ({
         if (type === "normal") {
             document.addEventListener("keydown", keyboardHandler);
         }
-        document.addEventListener("mouseup", handleMouseUp);
-        document.addEventListener("mousemove", handleMove);
-
-        // add (default)
+        // start video loading with this quality
         setQuality(Number(localStorage.getItem("vo-quality") ?? 1080));
         return () => {
-            document.removeEventListener("mouseup", handleMouseUp);
-            document.removeEventListener("mousemove", handleMove);
             if (type === "normal") {
                 document.removeEventListener("keydown", keyboardHandler);
             }
         };
     }, []);
 
-    // dirty solution to deal with event document event listeners
-    function updateIsScrubbing(value: boolean) {
-        setIsScrubbing(value);
-        isScrubbingRef.current = value;
-    }
-    //
+    useEffect(() => {
+        if (!isScrubbing) return;
+        // event listeners to track timeline scrubbing
+        const handleEnd = (e: any) => {
+            toggleScrubbing(e);
+        };
+        const handleMove = throttle((e) => {
+            handleTimelineUpdate(e, isScrubbing);
+        }, throttleDelay);
+
+        document.addEventListener("touchmove", handleMove);
+        document.addEventListener("touchend", handleEnd);
+        document.addEventListener("mousemove", handleMove);
+        document.addEventListener("mouseup", handleEnd);
+        return () => {
+            document.removeEventListener("touchmove", handleMove);
+            document.removeEventListener("touchend", handleEnd);
+            document.removeEventListener("mousemove", handleMove);
+            document.removeEventListener("mouseup", handleEnd);
+        };
+    }, [isScrubbing]);
+
+    const handleMouseOverMove = throttle((e) => {
+        if (!isScrubbing) handleTimelineUpdate(e, isScrubbing);
+    }, throttleDelay);
+
+    // video load start
     function handleLoadStart() {
         const video = videoRef.current;
         if (!video) return;
+        video.muted = Number(localStorage.getItem("vo-muted") ?? 0) === 1;
         video.volume = Number(localStorage.getItem("vo-volume") ?? 0.5);
         video.playbackRate = Number(localStorage.getItem("vo-speed") ?? 1);
         setLoading(true);
@@ -147,47 +162,42 @@ const VideoPlayer = ({
             timelineContainer.style.getPropertyValue("--progress-position") ?? 0
         );
         video.currentTime = percent * video.duration;
-        // if video was not paused before -> play it
-        if (wasPaused.current === false) await playVideo();
+        if (wasPaused === false) await playVideo();
     }
     // update displayed time
     function handleTimeUpdate() {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
-        if (!video) return;
         if (!timelineContainer) return;
-        if (!video.duration) return;
+        if (!video?.duration) return;
         if (loading) return;
         setTime(formatDuration(video.currentTime) || "0:00");
         const percent = video.currentTime / video.duration;
-
         timelineContainer.style.setProperty(
             "--progress-position",
             percent.toString()
         );
-
         updateBufferRange();
     }
     // update timeline
     function handleTimelineUpdate(
-        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
+        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
+        scrubbing: boolean
     ) {
         const previewImg = previewImgRef.current;
         const thumbnailImg = thumbnailImgRef.current;
         const timelineContainer = timelineRef.current;
-
         if (!timelineContainer) return;
         if (!previewImg) return;
         if (!thumbnailImg) return;
 
         let x = 0;
         if ("touches" in e) {
-            x = e.targetTouches[0].pageX;
+            x = e.changedTouches[0].pageX;
         } else if ("pageX" in e) {
+            e.preventDefault();
             x = e.pageX;
         }
-
-        const scrubbing = isScrubbingRef.current;
         const rect = timelineContainer.getBoundingClientRect();
         const percent =
             Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
@@ -213,80 +223,51 @@ const VideoPlayer = ({
             previewPercent.toString()
         );
         if (scrubbing) {
-            if (x) e.preventDefault();
             timelineContainer.style.setProperty(
                 "--progress-position",
                 percent.toString()
             );
         }
     }
-    // scrubbing via mouse
-    async function toggleScrubbing(e: MouseEvent<HTMLDivElement>) {
+    // scrubbing via mouse and touch
+    async function toggleScrubbing(
+        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
+    ) {
         const video = videoRef.current;
         const timelineContainer = timelineRef.current;
-        if (!video) return;
+        //don't do anything for mouseDown when touchDevice is active
         if (!timelineContainer) return;
-        if (!video.duration) return;
+        if (!video?.duration) return;
         if (loading) return;
 
-        const rect = timelineContainer.getBoundingClientRect();
-        const percent =
-            Math.min(Math.max(0, e.pageX - rect.x), rect.width) / rect.width;
-        const scrubbing = (e.buttons & 1) === 1;
-
-        updateIsScrubbing(scrubbing);
-        if (scrubbing) {
-            wasPaused.current = video.paused;
-            pauseVideo();
-        } else {
-            video.currentTime = percent * video.duration;
-            if (wasPaused.current === false) await playVideo();
+        let scrubbing = false;
+        let coordX = 0;
+        if ("touches" in e) {
+            // touch
+            coordX = e.changedTouches[0].pageX;
+            // targetTouches to determine active touches
+            scrubbing = (e.targetTouches.length & 1) === 1;
+        } else if ("pageX" in e) {
+            // mouse
+            coordX = e.pageX;
+            scrubbing = (e.buttons & 1) === 1;
         }
-        handleTimelineUpdate(e);
-    }
-    // scrubbing via touchpad
-    async function handleTouchStartScrubbing(e: TouchEvent<HTMLDivElement>) {
-        const video = videoRef.current;
-        const timelineContainer = timelineRef.current;
-        if (!video) return;
-        if (!timelineContainer) return;
-        if (e.targetTouches.length > 1) return;
-        if (!video.duration) return;
-        if (loading) return;
-        const rect = timelineContainer.getBoundingClientRect();
-        let percent =
-            Math.min(
-                Math.max(0, e.targetTouches[0].pageX - rect.x),
-                rect.width
-            ) / rect.width;
-        updateIsScrubbing(true);
-
-        document.ontouchmove = function () {
-            percent =
-                Math.min(
-                    Math.max(0, e.targetTouches[0].pageX - rect.x),
-                    rect.width
-                ) / rect.width;
-            wasPaused.current = video.paused;
-            pauseVideo();
-            handleTimelineUpdate(e);
-        };
-        document.ontouchend = document.ontouchcancel = async function () {
+        setIsScrubbing(scrubbing);
+        handleTimelineUpdate(e, scrubbing);
+        if (!scrubbing) {
+            const rect = timelineContainer.getBoundingClientRect();
+            const percent =
+                Math.min(Math.max(0, coordX - rect.x), rect.width) / rect.width;
             video.currentTime = percent * video.duration;
-            if (wasPaused.current === false) await playVideo();
-            updateIsScrubbing(false);
-            //remove event listeners
-            document.ontouchend =
-                document.ontouchcancel =
-                document.ontouchmove =
-                    null;
-        };
+            if (wasPaused === false) await playVideo();
+            return;
+        }
+        pauseVideo();
     }
     /* EVENT HANDLERS */
     async function handleVideoClick() {
         const video = videoRef.current;
-        if (!video) return;
-        if (!video.duration) return;
+        if (!video?.duration) return;
         if (loading) return;
         video.paused ? await playVideo() : pauseVideo();
     }
@@ -307,6 +288,8 @@ const VideoPlayer = ({
         const video = e.currentTarget;
         if (!volumeSliderRef?.current) return;
         volumeSliderRef.current.value = video.volume.toString();
+        localStorage.setItem("vo-volume", volumeSliderRef.current.value);
+        localStorage.setItem("vo-muted", video.muted ? "1" : "0");
         volumeSliderRef.current.style.background = `linear-gradient(90deg, white ${
             video.volume * 100
         }%, rgb(120 113 108 / 0.5) 0%)`;
@@ -319,7 +302,6 @@ const VideoPlayer = ({
         } else {
             setVolumeLevel("low");
         }
-        localStorage.setItem("vo-volume", volumeSliderRef.current.value);
     }
     // full screen button
     function handleFullScreen() {
@@ -367,26 +349,28 @@ const VideoPlayer = ({
     }
     // quality select one of the list items
     function handleQualitySelect(i: number) {
-        if (!videoRef.current) return;
-        wasPaused.current = videoRef.current.paused;
         localStorage.setItem("vo-quality", i.toString());
+        pauseVideo();
         setQuality(i);
         setPopup(false);
     }
     /* UTILITY FUNCTIONS */
     async function playVideo() {
         try {
-            await videoRef.current?.play();
-            setPaused(false);
+            if (videoRef.current?.paused) {
+                await videoRef.current?.play();
+                setPaused(false);
+            }
         } catch (error) {}
     }
     function pauseVideo() {
-        videoRef.current?.pause();
+        if (!videoRef.current?.duration) return;
+        setWasPaused(videoRef.current.paused);
         setPaused(true);
+        videoRef.current.pause();
     }
     async function togglePlay() {
-        if (!videoRef.current) return;
-        if (!videoRef.current.duration) return;
+        if (!videoRef.current?.duration) return;
         videoRef.current.paused ? await playVideo() : pauseVideo();
     }
     function toggleMute() {
@@ -440,7 +424,7 @@ const VideoPlayer = ({
             {type === "embed" && (
                 <div
                     className={`absolute left-0 top-0 right-0 text-white z-50 opacity-0 transition-opacity before:content-[''] before:absolute before:top-0 before:w-full before:-z-10 before:pointer-events-none before:bg-gradient-to-b before:from-black/75 before:to-transparent before:aspect-[3/1] group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
-                        videoRef.current?.paused ? "opacity-100" : ""
+                        paused ? "opacity-100" : ""
                     }`}
                 >
                     <a
@@ -481,16 +465,16 @@ const VideoPlayer = ({
             {/* video controls container */}
             <div
                 className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
-                    videoRef.current?.paused ? "opacity-100" : ""
+                    paused || isTouchDevice() ? "opacity-100" : ""
                 }`}
             >
                 {/* timeline container */}
                 <div
                     ref={timelineRef}
                     className="group/timeline h-4 ms-2 me-2 cursor-pointer flex items-end"
-                    onMouseMove={handleTimelineUpdate}
+                    onMouseMove={handleMouseOverMove}
                     onMouseDown={toggleScrubbing}
-                    onTouchStart={handleTouchStartScrubbing}
+                    onTouchStart={toggleScrubbing}
                 >
                     {/* timeline */}
                     <div
@@ -501,9 +485,9 @@ const VideoPlayer = ({
                         {/* preview image */}
                         <img
                             ref={previewImgRef}
-                            className={`preview-img ${
-                                isScrubbing ? "block" : "hidden"
-                            } group-hover/timeline:block absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
+                            className={`preview-img group-hover/timeline:block ${
+                                delayedScrubbing ? "block" : "hidden"
+                            } absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
                         />
                         {/* thumb */}
                         <div
@@ -540,7 +524,11 @@ const VideoPlayer = ({
                             min="0"
                             max="1"
                             step="any"
-                            className="volume-slider w-[1px] h-[0.3rem] origin-left scale-x-0 transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100"
+                            className={`volume-slider  h-[0.3rem] origin-left  transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100 ${
+                                isTouchDevice()
+                                    ? "w-24 scale-x-100"
+                                    : "w-[1px] scale-x-0"
+                            }`}
                             onChange={handleSliderInput}
                         ></input>
                     </div>

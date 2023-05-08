@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { storage } from "@/utils/storage";
+import toNumber from "@/utils/toNumber";
 
 export default async function handler(
     req: NextApiRequest,
@@ -27,9 +28,9 @@ export default async function handler(
     // Example: "bytes=0-1" or "bytes=0-"
     const CHUNK_SIZE = 3 * 10 ** 6; // 3MB if end is not specified
     const parts = range.replace("bytes=", "").split("-");
-    const start = parseInt(parts[0]);
+    const start = toNumber(parts[0]) || 0;
     const end =
-        parseInt(parts[1]) || Math.min(start + CHUNK_SIZE, videoSize - 1);
+        toNumber(parts[1]) || Math.min(start + CHUNK_SIZE, videoSize - 1);
 
     // Create headers
     const contentLength = end - start + 1;

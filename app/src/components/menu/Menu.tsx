@@ -59,7 +59,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 setStatus("Initializing upload");
                 const reqProgress: {
                     total: number;
-                    items: { loaded?: number }[];
+                    items: { loaded: number }[];
                 } = { total: fileSize, items: [] };
 
                 try {

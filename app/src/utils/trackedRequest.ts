@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
+import toNumber from "./toNumber";
 
 export default function trackedRequest(
     url: string,
@@ -7,7 +8,7 @@ export default function trackedRequest(
     idx: number,
     reqProgress: {
         total: number;
-        items: { loaded?: number }[];
+        items: { loaded: number }[];
     },
     setStatus: Dispatch<SetStateAction<string>>
 ) {
@@ -17,12 +18,10 @@ export default function trackedRequest(
             reqProgress.items[idx].loaded = e.loaded;
             const currentProgress = Object.keys(reqProgress.items).reduce(
                 (prev, curr) => {
-                    const currNumber = Number(curr);
-
-                    if (!isNaN(currNumber)) {
-                        return prev + reqProgress.items[currNumber].loaded!;
-                    }
-                    return prev;
+                    const currNumber = toNumber(curr);
+                    return isNaN(currNumber)
+                        ? prev
+                        : prev + reqProgress.items[currNumber].loaded;
                 },
                 0
             );

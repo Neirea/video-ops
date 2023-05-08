@@ -22,6 +22,7 @@ import VolumeMutedIcon from "../icons/VolumeMutedIcon";
 import ControlButton from "./ControlButton";
 import useThumbnails from "@/hooks/useThumbnails";
 import { throttle } from "@/utils/throttle";
+import toNumber from "@/utils/toNumber";
 
 //type support for different browsers
 declare global {
@@ -106,7 +107,7 @@ const VideoPlayer = ({
             document.addEventListener("keydown", keyboardHandler);
         }
         // start video loading with this quality
-        setQuality(Number(localStorage.getItem("vo-quality") ?? 1080));
+        setQuality(toNumber(localStorage.getItem("vo-quality")) || 1080);
         return () => {
             if (type === "normal") {
                 document.removeEventListener("keydown", keyboardHandler);
@@ -144,9 +145,11 @@ const VideoPlayer = ({
     function handleLoadStart() {
         const video = videoRef.current;
         if (!video) return;
-        video.muted = Number(localStorage.getItem("vo-muted") ?? 0) === 1;
-        video.volume = Number(localStorage.getItem("vo-volume") ?? 0.5);
-        video.playbackRate = Number(localStorage.getItem("vo-speed") ?? 1);
+        const vol = toNumber(localStorage.getItem("vo-volume"));
+        const spd = toNumber(localStorage.getItem("vo-speed"));
+        video.volume = vol >= 0 && vol <= 1 ? vol : 0.5; // values: 0..1
+        video.playbackRate = spd > 0 && spd <= 2 && spd % 0.25 === 0 ? spd : 1; // values: 0.25..2 with 0.25 increment
+        video.muted = toNumber(localStorage.getItem("vo-muted")) === 1; // values: 0 or 1
         setLoading(true);
         setTime(formatDuration(video.currentTime));
         setSpeed(video.playbackRate);
@@ -158,9 +161,10 @@ const VideoPlayer = ({
         if (!video) return;
         if (!timelineContainer) return;
         setLoading(false);
-        const percent = Number(
-            timelineContainer.style.getPropertyValue("--progress-position") ?? 0
-        );
+        const percent =
+            toNumber(
+                timelineContainer.style.getPropertyValue("--progress-position")
+            ) || 0;
         video.currentTime = percent * video.duration;
         if (wasPaused === false) await playVideo();
     }

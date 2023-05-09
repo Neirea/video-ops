@@ -110,22 +110,22 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                     }
                     setStatus("0%");
 
-                    chunksArray.forEach((item, idx) => {
-                        reqProgress.items[idx] = { loaded: 0 };
+                    for (let i = 0; i < chunksArray.length; i++) {
+                        reqProgress.items[i] = { loaded: 0 };
                         partRequests.push(
                             trackedRequest(
-                                parts[idx].signedUrl,
+                                parts[i].signedUrl,
                                 "PUT",
-                                item,
-                                idx,
+                                chunksArray[i],
+                                i,
                                 reqProgress,
                                 setStatus
                             )
                         );
-                    });
+                    }
 
-                    const partResetuls = await Promise.all(partRequests);
-                    const results = partResetuls.map(({ ETag, PartNumber }) => {
+                    const partResults = await Promise.all(partRequests);
+                    const results = partResults.map(({ ETag, PartNumber }) => {
                         return {
                             ETag,
                             PartNumber,

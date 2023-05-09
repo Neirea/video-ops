@@ -44,7 +44,6 @@ export default function deriveImages(source: string): Promise<string[]> {
             //remove source
             tmpCanvas.remove();
             canvas.remove();
-            URL.revokeObjectURL(source);
             //resolve blob urls of images
             resolve(thumbnails);
         };
@@ -56,7 +55,6 @@ function getCanvasBlobUrl(canvas: HTMLCanvasElement): Promise<string> {
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob!);
-
             resolve(url);
         });
     });

@@ -175,7 +175,7 @@ const VideoPlayer = ({
         if (!timelineContainer) return;
         if (!video?.duration) return;
         if (loading) return;
-        setTime(formatDuration(video.currentTime) || "0:00");
+        setTime(formatDuration(video.currentTime));
         const percent = video.currentTime / video.duration;
         timelineContainer.style.setProperty(
             "--progress-position",

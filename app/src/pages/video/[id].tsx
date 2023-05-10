@@ -27,10 +27,7 @@ const VideoPage = ({
     const currentVideo = videoNames.find((i) => i.url == videoId);
 
     useEffect(() => {
-        // Check if running on the client-side (browser)
-        if (typeof window !== "undefined") {
-            setOrigin(window.location.origin);
-        }
+        setOrigin(window.location.origin);
     }, []);
 
     function handleLinkSelect(e: MouseEvent) {
@@ -100,6 +97,7 @@ const VideoPage = ({
                             <button
                                 className="text-white relative"
                                 onClick={handleCopy}
+                                title="Copy embed link"
                             >
                                 {!copied ? (
                                     <svg

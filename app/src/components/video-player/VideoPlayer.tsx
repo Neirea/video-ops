@@ -507,12 +507,12 @@ const VideoPlayer = ({
                 {/* controls */}
                 <div className="flex gap-2 p-1 items-center">
                     {/* play/pause button */}
-                    <ControlButton onClick={handleVideoClick}>
+                    <ControlButton onClick={handleVideoClick} title={paused ? "Play" : "Pause"}>
                         {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
                     </ControlButton>
                     {/* volume icon */}
                     <div className="flex items-center hover:flex group/vol">
-                        <ControlButton onClick={handleMute}>
+                        <ControlButton onClick={handleMute} title={'Mute/Unmute'}>
                             {volumeLevel === "high" ? (
                                 <VolumeHighIcon />
                             ) : volumeLevel === "low" ? (
@@ -528,6 +528,7 @@ const VideoPlayer = ({
                             min="0"
                             max="1"
                             step="any"
+                            title="Volume slider"
                             className={`volume-slider  h-[0.3rem] origin-left  transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100 ${
                                 isTouchDevice()
                                     ? "w-24 scale-x-100"
@@ -580,6 +581,7 @@ const VideoPlayer = ({
                     {/* full screen button */}
                     <ControlButton
                         onClick={handleFullScreen}
+                        title={isFullScreen ? "Close fullscreen":"Enter fullscreen"}
                         disabled={type === "embed"}
                     >
                         {isFullScreen ? <VideoFullClose /> : <VideoFullOpen />}

@@ -2,9 +2,8 @@ import { useRouter } from "next/router";
 import { Inter } from "next/font/google";
 import Head from "next/head";
 import { GetServerSideProps, InferGetServerSidePropsType } from "next";
-import { Video } from "@/models/Video";
+import { Video, VideoType } from "@/models/Video";
 import dbConnect from "@/lib/connect-db";
-import { VideoType } from "@/models/Video";
 import Menu from "@/components/menu/Menu";
 import VideoPlayer from "@/components/video-player/VideoPlayer";
 import getIframeLink from "../../utils/getIframeLink";
@@ -133,7 +132,8 @@ export const getServerSideProps: GetServerSideProps<{
     imageUrl: string;
 }> = async ({ query }) => {
     await dbConnect();
-    const videoNames = await Video.find({});
+    // get only JSON without _id
+    const videoNames = await Video.find({},'-_id url name').lean();
 
     const videoUrl = query.id as string | undefined;
     const currentVideo = videoNames.find((i) => i.url === videoUrl);
@@ -145,8 +145,7 @@ export const getServerSideProps: GetServerSideProps<{
     const imageUrl = await getImageUrl(currentVideo.url);
 
     return {
-        // workaround to serialize mongoose object
-        props: { videoNames: JSON.parse(JSON.stringify(videoNames)), imageUrl },
+        props: { videoNames, imageUrl },
     };
 };
 

@@ -16,9 +16,9 @@ export const getServerSideProps: GetServerSideProps<{
     imageUrl: string;
 }> = async ({ query }) => {
     await dbConnect();
-    // list of videos
     const videoUrl = query.id as string | undefined;
-    const video = await Video.findOne({ url: videoUrl });
+    // get only JSON without _id
+    const video = await Video.findOne({url: videoUrl},'-_id url name').lean();
 
     if (!video) {
         return {
@@ -28,7 +28,7 @@ export const getServerSideProps: GetServerSideProps<{
     const imageUrl = await getImageUrl(video.url);
 
     return {
-        props: { video: JSON.parse(JSON.stringify(video)), imageUrl: imageUrl },
+        props: { video, imageUrl },
     };
 };
 

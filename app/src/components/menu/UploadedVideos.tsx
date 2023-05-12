@@ -10,7 +10,7 @@ const UploadedVideos = ({ videos }: { videos: VideoType[] | undefined }) => {
                 {videos?.map((i) => {
                     return (
                         <li
-                            key={i._id.toString()}
+                            key={i.url}
                             className="my-1 text-xl opacity-[85%] hover:opacity-100"
                         >
                             <Link href={`/video/${i.url}`}>{i.name}</Link>

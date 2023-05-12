@@ -5,6 +5,7 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    const videoNames = await Video.find({});
+    // get JSON without _id
+    const videoNames = await Video.find({},'-_id url name').lean();
     res.json({ videoNames });
 }

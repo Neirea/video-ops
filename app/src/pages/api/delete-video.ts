@@ -16,15 +16,17 @@ export default async function handler(
             res.status(403).json({ message: "Acess Denied" });
             return;
         }
-        const url = req.body.url;
         try {
-            const video = await Video.findOne({ url });
-
+            const video = await Video.findOne({ url:req.body.url });
+            if(!video){
+                res.status(400).send({ message: "Failed to delete video" });
+                return;
+            }
             await storage
                 .bucket(process.env.GCP_PROD_BUCKET!)
                 .deleteFiles({ prefix: video.url });
 
-            await Video.deleteOne({ url });
+            await Video.deleteOne({ url:video.url });
 
             res.status(200).end();
         } catch (error) {

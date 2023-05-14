@@ -7,7 +7,11 @@ const VideoSchema = new Schema(
             unique: true,
             required: true,
         },
-        url: String,
+        url: {
+            type: String,
+            unique: true,
+            required: true,
+        },
     },
     { timestamps: true }
 );

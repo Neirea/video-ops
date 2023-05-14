@@ -1,4 +1,6 @@
-import { model, models, Schema } from "mongoose";
+import { Model, model, models, Schema } from "mongoose";
+
+export type TokenType = {token:string,charges:number};
 
 const TokenSchema = new Schema({
     token: {
@@ -13,6 +15,6 @@ const TokenSchema = new Schema({
     },
 });
 
-const Token = models.Key || model("Key", TokenSchema);
+const Token:Model<TokenType> = models.Key || model("Key", TokenSchema);
 
 export { Token };

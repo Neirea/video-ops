@@ -1,4 +1,4 @@
-import { model, models, Schema, Types } from "mongoose";
+import { Model, model, models, Schema, Types } from "mongoose";
 
 type VideoSchemaType = {
     name: string;
@@ -27,6 +27,6 @@ const VideoSchema = new Schema(
     { timestamps: true }
 );
 
-const Video = models.Video || model<VideoSchemaType>("Video", VideoSchema);
+const Video:Model<VideoSchemaType> = models.Video || model("Video", VideoSchema);
 
 export { Video };

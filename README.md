@@ -8,7 +8,9 @@ This is an app for uploading videos, processing them into 480p, 720p, and 1080p.
 
 ## System architecture:
 
-1.  Videos are uploaded with app using password token
+![Video Ops diagram](https://i.postimg.cc/PfFspxmK/video-ops-diagram.png)
+
+1.  Videos are uploaded with app using password token via signed URLs.
 2.  Raw video is uploaded to Google Cloud Storage (GCP) bucket via multipart upload.
 3.  GCP upload triggers Google Pub/Sub which pushes a notification to the transcoding server.
 4.  FFmpeg generates thumbnails with all set qualities.

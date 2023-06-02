@@ -8,7 +8,7 @@ This is an app for uploading videos, processing them into 480p, 720p, and 1080p.
 
 ## System architecture:
 
-![Video Ops diagram](https://i.postimg.cc/PfFspxmK/video-ops-diagram.png)
+![Video Ops diagram](https://i.gyazo.com/d7a3aa9109f6289b1f96b2bc0939e8bf.png)
 
 1.  Videos are uploaded with app using password token via signed URLs.
 2.  Raw video is uploaded to Google Cloud Storage (GCP) bucket via multipart upload.

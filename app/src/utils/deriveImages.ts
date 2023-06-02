@@ -21,7 +21,7 @@ export default function deriveImages(source: string): Promise<string[]> {
             const thumbnails = [];
             // tmp canvas to put ImageData derived from main canvas
             const tmpCanvas = document.createElement("canvas");
-            const tmoContext = tmpCanvas.getContext("2d");
+            const tmpContext = tmpCanvas.getContext("2d");
             tmpCanvas.width = thumbnailWidth;
             tmpCanvas.height = thumbnailHeight;
             for (let i = 0; i < numThumbnails; i++) {
@@ -36,7 +36,7 @@ export default function deriveImages(source: string): Promise<string[]> {
                     thumbnailWidth,
                     thumbnailHeight
                 );
-                tmoContext!.putImageData(thumbnail, 0, 0);
+                tmpContext!.putImageData(thumbnail, 0, 0);
                 const url = await getCanvasBlobUrl(tmpCanvas);
                 thumbnails.push(url);
             }

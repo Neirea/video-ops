@@ -1,11 +1,18 @@
-import { ChangeEvent, FormEvent, useState } from "react";
-import FormInput from "../FormInput";
-import Heading from "../HeadingOne";
-import Button from "../Button";
-import FileInput from "../FileInput";
 import generateShortId from "@/utils/generateShortId";
-import trackedRequest from "@/utils/trackedRequest";
-import Transcoding from "./Transcoding";
+import { ChangeEvent, FormEvent, useState } from "react";
+import Button from "../../Button";
+import FileInput from "../../FileInput";
+import FormInput from "../../FormInput";
+import Heading from "../../HeadingOne";
+import Transcoding from "../Transcoding";
+import {
+    completeUpload,
+    createUpload,
+    createWSConnection,
+    getUploadUrls,
+    splitBuffer,
+    trackUpload,
+} from "./utils";
 
 const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [token, setToken] = useState("");
@@ -34,7 +41,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
         if (status) setStatus("");
     }
 
-    const trackUploadStatus = (fileName: string) => {
+    function trackUploadStatus(fileName: string) {
         //create websocket connection
         const socket = createWSConnection(fileName);
         // picture of uploading
@@ -57,7 +64,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 socket.close();
             }
         });
-    };
+    }
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -120,17 +127,15 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 //finish uploading
                 setStatus("Finalizing upload...");
                 await completeUpload(token, UploadId, Key, results);
+                setIsUploading(false);
+                setIsTranscoding(true);
+                setStage(1);
+                //check status with websockets
+                trackUploadStatus(fileName);
             } catch (error: any) {
-                //add: resetUI
                 setIsUploading(false);
                 setStatus(error.message);
-                return;
             }
-            setIsUploading(false);
-            setIsTranscoding(true);
-            setStage(1);
-
-            trackUploadStatus(fileName);
         };
         fileReader.readAsArrayBuffer(file);
     }
@@ -187,135 +192,4 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     );
 };
 
-export async function createUpload(token: string, fileName: string) {
-    const uploadResult = await fetch("/api/create-upload", {
-        method: "POST",
-        headers: {
-            "content-type": "application/json",
-            token: token,
-        },
-        body: JSON.stringify({
-            key: fileName,
-        }),
-    });
-    if (!uploadResult.ok) {
-        throw await uploadResult.json();
-    }
-    const { UploadId, Key } = await uploadResult.json();
-    return { UploadId, Key };
-}
-
-export async function getUploadUrls(
-    token: string,
-    UploadId: string,
-    Key: string,
-    chunkCount: number
-) {
-    const uploadUrlsResult = await fetch("/api/get-upload-urls", {
-        method: "POST",
-        headers: {
-            "content-type": "application/json",
-            token: token,
-        },
-        body: JSON.stringify({
-            UploadId,
-            Key,
-            parts: chunkCount,
-        }),
-    });
-    if (!uploadUrlsResult.ok) throw await uploadUrlsResult.json();
-    const { parts } = await uploadUrlsResult.json();
-    return parts;
-}
-
-export async function trackUpload(
-    chunksArray: (string | ArrayBuffer)[],
-    fileSize: number,
-    parts: any[],
-    handleStatus: (v: string) => void
-) {
-    const reqProgress: {
-        current: number;
-        total: number;
-        items: number[];
-    } = { total: fileSize, current: 0, items: [] };
-    const partRequests: any[] = [];
-    for (let i = 0; i < chunksArray.length; i++) {
-        reqProgress.items[i] = 0;
-        partRequests.push(
-            trackedRequest({
-                url: parts[i].signedUrl,
-                body: chunksArray[i],
-                idx: i,
-                reqProgress,
-                handleStatus,
-            })
-        );
-    }
-    const partResults = await Promise.all(partRequests);
-    const results = partResults.map(({ ETag, PartNumber }) => {
-        return {
-            ETag,
-            PartNumber,
-        };
-    });
-    return results;
-}
-
-export async function completeUpload(
-    token: string,
-    UploadId: string,
-    Key: string,
-    results: {
-        ETag: any;
-        PartNumber: any;
-    }[]
-) {
-    const completeResult = await fetch("/api/complete-upload", {
-        method: "POST",
-        headers: {
-            "content-type": "application/json",
-            token: token,
-        },
-        body: JSON.stringify({
-            Key,
-            UploadId,
-            parts: results,
-        }),
-    });
-    if (!completeResult.ok) throw await completeResult.json();
-    await completeResult.json();
-}
-
-export function splitBuffer(
-    buffer: string | ArrayBuffer,
-    chunkCount: number,
-    chunkSize: number
-) {
-    const chunksArray = [];
-
-    for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
-        const chunk = buffer.slice(
-            chunkId * chunkSize,
-            chunkId * chunkSize + chunkSize
-        );
-        chunksArray.push(chunk);
-    }
-    return chunksArray;
-}
-
-export function createWSConnection(fileName: string) {
-    const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
-    socket.addEventListener("open", () => {
-        socket.send(
-            JSON.stringify({
-                type: "upload",
-                fileName: fileName,
-            })
-        );
-    });
-    return socket;
-}
-
 export default Menu;
-

@@ -1,34 +1,35 @@
-import { Dispatch, SetStateAction } from "react";
-
-export default function trackedRequest(
-    url: string,
-    method: string,
-    body: any,
-    idx: number,
+export default function trackedRequest({
+    url,
+    body,
+    idx,
+    reqProgress,
+    handleStatus,
+}: {
+    url: string;
+    body: any;
+    idx: number;
     reqProgress: {
+        current: number;
         total: number;
-        items: { loaded: number }[];
-    },
-    setStatus: Dispatch<SetStateAction<string>>
-) {
+        items: number[];
+    };
+    handleStatus: (v: string) => void;
+}) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (e) => {
-            reqProgress.items[idx].loaded = e.loaded;
-            const currentProgress = Object.keys(reqProgress.items).reduce(
-                (prev, curr) => {
-                    const currNumber = +curr;
-                    return isNaN(currNumber)
-                        ? prev
-                        : prev + reqProgress.items[currNumber].loaded;
-                },
-                0
-            );
-            setStatus(
-                `${Math.floor((currentProgress / reqProgress.total) * 100)}%`
+            // curr = curr - prev_val + curr_val
+            reqProgress.current =
+                reqProgress.current - reqProgress.items[idx] + e.loaded;
+            reqProgress.items[idx] = e.loaded;
+
+            handleStatus(
+                `${Math.floor(
+                    (reqProgress.current / reqProgress.total) * 100
+                )}%`
             );
         });
-        xhr.open(method, url);
+        xhr.open("PUT", url);
         xhr.onload = function () {
             if (xhr.status === 200) {
                 const ETag = xhr.getResponseHeader("ETag");

@@ -33,6 +33,32 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
         setSelectedFile(e.target.files[0]);
         if (status) setStatus("");
     }
+
+    const trackUploadStatus = (fileName: string) => {
+        //create websocket connection
+        const socket = createWSConnection(fileName);
+        // picture of uploading
+        socket.addEventListener("message", (event) => {
+            const { status, msg } = JSON.parse(event.data);
+            if (status === "checked") {
+                setStage(2);
+                setStatus(msg);
+            }
+            if (status === "processed") {
+                setStatus(msg + " processed");
+                if (msg === "1080p") setStage(3);
+            }
+            if (status === "done") {
+                setStatus("Finished transcoding");
+                setStage(0);
+                setIsTranscoding(false);
+                //refetch video list
+                fetchVideos();
+                socket.close();
+            }
+        });
+    };
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         const file = selectedFile;
@@ -48,153 +74,63 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
             let CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
             const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
 
+            //generate file name
             const extension = file.name.split(".").pop()?.toLowerCase();
-            //can't do more than 10000 chunks for s3
-            const isSuccess = chunkCount <= 10000;
             const fileName =
                 fileNameInput + "@@@" + generateShortId() + `.${extension}`;
 
-            if (isSuccess) {
-                setIsUploading(true);
-                setStatus("Initializing upload");
-                const reqProgress: {
-                    total: number;
-                    items: { loaded: number }[];
-                } = { total: fileSize, items: [] };
-
-                try {
-                    const uploadResult = await fetch("/api/create-upload", {
-                        method: "POST",
-                        headers: {
-                            "content-type": "application/json",
-                            token: token,
-                        },
-                        body: JSON.stringify({
-                            key: fileName,
-                        }),
-                    });
-                    if (!uploadResult.ok) {
-                        throw await uploadResult.json();
-                    }
-                    const { UploadId, Key } = await uploadResult.json();
-
-                    //get urls for client to upload file chunks
-                    const uploadUrlsResult = await fetch(
-                        "/api/get-upload-urls",
-                        {
-                            method: "POST",
-                            headers: {
-                                "content-type": "application/json",
-                                token: token,
-                            },
-                            body: JSON.stringify({
-                                UploadId,
-                                Key,
-                                parts: chunkCount,
-                            }),
-                        }
-                    );
-                    if (!uploadUrlsResult.ok)
-                        throw await uploadUrlsResult.json();
-                    const { parts } = await uploadUrlsResult.json();
-                    //result of s3 responses
-                    const chunksArray = [];
-                    const partRequests: any[] = [];
-
-                    for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
-                        const chunk = ev.target.result.slice(
-                            chunkId * CHUNK_SIZE,
-                            chunkId * CHUNK_SIZE + CHUNK_SIZE
-                        );
-                        chunksArray.push(chunk);
-                    }
-                    setStatus("0%");
-
-                    for (let i = 0; i < chunksArray.length; i++) {
-                        reqProgress.items[i] = { loaded: 0 };
-                        partRequests.push(
-                            trackedRequest(
-                                parts[i].signedUrl,
-                                "PUT",
-                                chunksArray[i],
-                                i,
-                                reqProgress,
-                                setStatus
-                            )
-                        );
-                    }
-
-                    const partResults = await Promise.all(partRequests);
-                    const results = partResults.map(({ ETag, PartNumber }) => {
-                        return {
-                            ETag,
-                            PartNumber,
-                        };
-                    });
-                    //finish uploading
-                    setStatus("Finalizing upload...");
-                    const completeResult = await fetch("/api/complete-upload", {
-                        method: "POST",
-                        headers: {
-                            "content-type": "application/json",
-                            token: token,
-                        },
-                        body: JSON.stringify({
-                            Key,
-                            UploadId,
-                            parts: results,
-                        }),
-                    });
-                    if (!completeResult.ok) throw await completeResult.json();
-                    await completeResult.json();
-                } catch (error: any) {
-                    //add: resetUI
-                    setIsUploading(false);
-                    setStatus(error.message);
-                    reqProgress.total = 0;
-                    reqProgress.items = [];
-                    return;
-                }
-                setIsUploading(false);
-                setIsTranscoding(true);
-                setStage(1);
-                //create websocket connection
-                const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
-                socket.addEventListener("open", () => {
-                    socket.send(
-                        JSON.stringify({
-                            type: "upload",
-                            fileName: fileName,
-                        })
-                    );
-                });
-                // picture of uploading
-                socket.addEventListener("message", (event) => {
-                    const { status, msg } = JSON.parse(event.data);
-                    switch (status) {
-                        case "checked":
-                            setStage(2);
-                            setStatus(msg);
-                            break;
-                        case "processed":
-                            setStatus(msg + " processed");
-                            if (msg === "1080p") setStage(3);
-                            break;
-                        case "done":
-                            setStatus("Finished transcoding");
-                            setStage(0);
-                            setIsTranscoding(false);
-                            //refetch video list
-                            fetchVideos();
-                            socket.close();
-                            break;
-                        default:
-                            break;
-                    }
-                });
-            } else {
+            //can't do more than 10000 chunks for upload
+            const isSuccess = chunkCount <= 10000;
+            if (!isSuccess) {
                 setStatus("Wrong file format");
+                return;
             }
+
+            setIsUploading(true);
+            setStatus("Initializing upload");
+
+            try {
+                //initialize upload
+                const { UploadId, Key } = await createUpload(token, fileName);
+
+                //get urls for client to upload file chunks
+                const parts = await getUploadUrls(
+                    token,
+                    UploadId,
+                    Key,
+                    chunkCount
+                );
+                //split file into chunks
+                const chunksArray = splitBuffer(
+                    ev.target.result,
+                    chunkCount,
+                    CHUNK_SIZE
+                );
+                setStatus("0%");
+                //track each of the upload part
+                const handleStatus = (v: string) => {
+                    setStatus(v);
+                };
+                const results = await trackUpload(
+                    chunksArray,
+                    fileSize,
+                    parts,
+                    handleStatus
+                );
+                //finish uploading
+                setStatus("Finalizing upload...");
+                await completeUpload(token, UploadId, Key, results);
+            } catch (error: any) {
+                //add: resetUI
+                setIsUploading(false);
+                setStatus(error.message);
+                return;
+            }
+            setIsUploading(false);
+            setIsTranscoding(true);
+            setStage(1);
+
+            trackUploadStatus(fileName);
         };
         fileReader.readAsArrayBuffer(file);
     }
@@ -251,4 +187,135 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     );
 };
 
+export async function createUpload(token: string, fileName: string) {
+    const uploadResult = await fetch("/api/create-upload", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            token: token,
+        },
+        body: JSON.stringify({
+            key: fileName,
+        }),
+    });
+    if (!uploadResult.ok) {
+        throw await uploadResult.json();
+    }
+    const { UploadId, Key } = await uploadResult.json();
+    return { UploadId, Key };
+}
+
+export async function getUploadUrls(
+    token: string,
+    UploadId: string,
+    Key: string,
+    chunkCount: number
+) {
+    const uploadUrlsResult = await fetch("/api/get-upload-urls", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            token: token,
+        },
+        body: JSON.stringify({
+            UploadId,
+            Key,
+            parts: chunkCount,
+        }),
+    });
+    if (!uploadUrlsResult.ok) throw await uploadUrlsResult.json();
+    const { parts } = await uploadUrlsResult.json();
+    return parts;
+}
+
+export async function trackUpload(
+    chunksArray: (string | ArrayBuffer)[],
+    fileSize: number,
+    parts: any[],
+    handleStatus: (v: string) => void
+) {
+    const reqProgress: {
+        current: number;
+        total: number;
+        items: number[];
+    } = { total: fileSize, current: 0, items: [] };
+    const partRequests: any[] = [];
+    for (let i = 0; i < chunksArray.length; i++) {
+        reqProgress.items[i] = 0;
+        partRequests.push(
+            trackedRequest({
+                url: parts[i].signedUrl,
+                body: chunksArray[i],
+                idx: i,
+                reqProgress,
+                handleStatus,
+            })
+        );
+    }
+    const partResults = await Promise.all(partRequests);
+    const results = partResults.map(({ ETag, PartNumber }) => {
+        return {
+            ETag,
+            PartNumber,
+        };
+    });
+    return results;
+}
+
+export async function completeUpload(
+    token: string,
+    UploadId: string,
+    Key: string,
+    results: {
+        ETag: any;
+        PartNumber: any;
+    }[]
+) {
+    const completeResult = await fetch("/api/complete-upload", {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            token: token,
+        },
+        body: JSON.stringify({
+            Key,
+            UploadId,
+            parts: results,
+        }),
+    });
+    if (!completeResult.ok) throw await completeResult.json();
+    await completeResult.json();
+}
+
+export function splitBuffer(
+    buffer: string | ArrayBuffer,
+    chunkCount: number,
+    chunkSize: number
+) {
+    const chunksArray = [];
+
+    for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
+        const chunk = buffer.slice(
+            chunkId * chunkSize,
+            chunkId * chunkSize + chunkSize
+        );
+        chunksArray.push(chunk);
+    }
+    return chunksArray;
+}
+
+export function createWSConnection(fileName: string) {
+    const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
+    socket.addEventListener("open", () => {
+        socket.send(
+            JSON.stringify({
+                type: "upload",
+                fileName: fileName,
+            })
+        );
+    });
+    return socket;
+}
+
 export default Menu;
+

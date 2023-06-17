@@ -1,23 +1,72 @@
 import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import { Storage } from "@google-cloud/storage";
 import "dotenv/config";
-import express from "express";
-import "express-async-errors";
+// import "express-async-errors";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import { createReadStream } from "fs";
 import fs from "fs/promises";
-import http from "http";
+import http, { IncomingMessage, ServerResponse } from "http";
 import mongoose from "mongoose";
 import { WebSocket, WebSocketServer } from "ws";
-import errorHandlerMiddleware from "./middleware/error-handle";
-import notFound from "./middleware/not-found";
+// import errorHandlerMiddleware from "./middleware/error-handle";
+// import notFound from "./middleware/not-found";
 import Video from "./model";
 import Bull from "bull";
 
-const app = express();
-const server = http.createServer(app);
+interface RouteHandlers {
+    [key: string]: {
+        method: "POST" | "GET" | "PATCH" | "PUT" | "DELETE";
+        execute: Function;
+    };
+}
+const routing: RouteHandlers = {
+    "/pubsub/push": { method: "POST", execute: handleProcessRoute },
+};
+
+const handleRequests = (
+    req: IncomingMessage,
+    res: ServerResponse,
+    body: string
+) => {
+    console.log("url=", req.url);
+    if (!req.url || !body) return;
+    const parsedBody = JSON.parse(body);
+    const data = routing[req.url];
+    if (req.method === data.method) {
+        data.execute(req, res, parsedBody);
+        return;
+    }
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end({ message: "Route was not found" });
+};
+
+// const app = express();
+//app.set("trust proxy",true);
+//req.socket.proxy = true;
+const server = http.createServer((req, res) => {
+    //reject non post methods
+    if (req.method !== "POST") {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Route not found." }));
+        return;
+    }
+    let body = "";
+    req.on("data", (chunk) => {
+        body += chunk;
+    });
+    req.on("end", () => {
+        try {
+            handleRequests(req, res, body);
+        } catch (error) {
+            console.log(error);
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end({ message: "Something went wrong try again later" });
+        }
+    });
+});
+
 const wss = new WebSocketServer({ server });
 type videoFile = { rawName: string };
 const queue: Bull.Queue<videoFile> = new Bull("transcode");
@@ -55,27 +104,33 @@ wss.on("connection", (socket) => {
     });
 });
 
-app.set("trust proxy", true);
-
-app.post("/pubsub/push", express.json(), async (req, res) => {
-    if (req.query.token !== process.env.PUBSUB_VERIFICATION_TOKEN) {
+// app.set("trust proxy", true);
+//app.post("/pubsub/push", express.json(),
+function handleProcessRoute (req: IncomingMessage, res: ServerResponse,body:any) {
+    const myUrl = new URL(req.url!, `http://${req.headers.host}`);
+    const query = myUrl.searchParams;
+    const token = query.get('token');
+    console.log('token=',token);
+    
+    if (token !== process.env.PUBSUB_VERIFICATION_TOKEN) {
         console.error(`wrong env: ${process.env.PUBSUB_VERIFICATION_TOKEN}`);
-        res.status(400).send();
+        res.end();
         return;
     }
     // The pub/sub message is a unicode string encoded in base64.
     const data = JSON.parse(
-        Buffer.from(req.body.message.data, "base64").toString().trim()
+        Buffer.from(body.message.data, "base64").toString().trim()
     );
     //queue up processing
     queue.add({
         rawName: data.name,
     });
-    res.status(200).send();
-});
+    res.writeHead(200,{'Content-Type':'text/plain'});
+    res.end('Success');
+};
 
-app.use(notFound);
-app.use(errorHandlerMiddleware);
+// app.use(notFound);
+// app.use(errorHandlerMiddleware);
 
 // Start the server
 const PORT = process.env.PORT || 8080;

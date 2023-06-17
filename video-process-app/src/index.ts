@@ -30,11 +30,12 @@ const handleRequests = (
     res: ServerResponse,
     body: Buffer
 ) => {
-    console.log("url=", req.url);
     if (!req.url || !body) return;
     const parsedBody = JSON.parse(body.toString());
     console.log(parsedBody);
-    const data = routing[req.url];
+    const url = req.url.split("?")[0];
+    const data = routing[url];
+    console.log(data);
     if (data) {
         data.execute(req, res, parsedBody);
         return;

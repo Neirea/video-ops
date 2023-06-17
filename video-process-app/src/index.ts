@@ -28,13 +28,14 @@ const routing: RouteHandlers = {
 const handleRequests = (
     req: IncomingMessage,
     res: ServerResponse,
-    body: string
+    body: Buffer
 ) => {
     console.log("url=", req.url);
     if (!req.url || !body) return;
-    const parsedBody = JSON.parse(body);
+    const parsedBody = body.toJSON();
+    console.log(parsedBody);
     const data = routing[req.url];
-    if (req.method === data.method) {
+    if (data) {
         data.execute(req, res, parsedBody);
         return;
     }
@@ -52,12 +53,13 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ message: "Route not found." }));
         return;
     }
-    let body = "";
+    let chunks: any[] = [];
     req.on("data", (chunk) => {
-        body += chunk;
+        chunks.push(chunk);
     });
     req.on("end", () => {
         try {
+            const body = Buffer.concat(chunks);
             handleRequests(req, res, body);
         } catch (error) {
             console.log(error);

@@ -53,13 +53,11 @@ const handleRequests = (
     res: ServerResponse,
     body: Buffer
 ) => {
-    if (!req.url || !body) return;
-    const parsedBody = JSON.parse(body.toString());
     const method = req.method as HttpMethod;
-    const url = req.url.split("?")[0]; // route url
+    const url = req.url?.split("?")[0] || "/"; // route url
     const handler = routing[method]?.[url];
     if (handler) {
-        handler(req, res, parsedBody);
+        handler(req, res, body);
         return;
     }
     res.writeHead(404, { "Content-Type": "application/json" });
@@ -74,7 +72,16 @@ const server = http.createServer((req, res) => {
     req.on("end", () => {
         try {
             const body = Buffer.concat(chunks);
-            handleRequests(req, res, body);
+            //parsing JSON body
+            let parsedBody;
+            if (req.headers["content-type"] === "application/json") {
+                try {
+                    parsedBody = JSON.parse(body.toString());
+                } catch (error) {
+                    parsedBody = {};
+                }
+            }
+            handleRequests(req, res, parsedBody);
         } catch (error) {
             console.log(error);
             res.writeHead(500, { "Content-Type": "application/json" });

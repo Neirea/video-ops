@@ -32,7 +32,7 @@ const handleRequests = (
 ) => {
     console.log("url=", req.url);
     if (!req.url || !body) return;
-    const parsedBody = body.toJSON();
+    const parsedBody = JSON.parse(body.toString());
     console.log(parsedBody);
     const data = routing[req.url];
     if (data) {
@@ -40,7 +40,7 @@ const handleRequests = (
         return;
     }
     res.writeHead(404, { "Content-Type": "application/json" });
-    res.end({ message: "Route was not found" });
+    res.end(JSON.stringify({ message: "Route was not found" }));
 };
 
 // const app = express();
@@ -64,7 +64,11 @@ const server = http.createServer((req, res) => {
         } catch (error) {
             console.log(error);
             res.writeHead(500, { "Content-Type": "application/json" });
-            res.end({ message: "Something went wrong try again later" });
+            res.end(
+                JSON.stringify({
+                    message: "Something went wrong try again later",
+                })
+            );
         }
     });
 });

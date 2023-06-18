@@ -2,26 +2,48 @@ import "dotenv/config";
 import http, { IncomingMessage, ServerResponse } from "http";
 import mongoose from "mongoose";
 import { WebSocket, WebSocketServer } from "ws";
-import Bull from "bull";
 import { processVideo } from "./process";
+import { createClient } from "redis";
+import AsyncQueue from "./AsyncQueue";
 
+type videoFile = { rawName: string };
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type RouteHandler = (
     req: IncomingMessage,
     res: ServerResponse,
     body?: any
 ) => void;
-
 type RouteDefinition = {
     [method in HttpMethod]?: {
         [url: string]: RouteHandler;
     };
 };
-const handleProcessRoute = (
+// queue
+const queueClient = createClient();
+queueClient.on("error", (error) => {
+    console.error(error);
+    process.exit(1);
+});
+queueClient.connect();
+const queue = new AsyncQueue<videoFile>(queueClient, "transcode");
+
+queue.process(async (job) => {
+    const { rawName } = job.data;
+    await processVideo(rawName);
+});
+
+// routes
+const routing: RouteDefinition = {
+    POST: {
+        "/pubsub/push": handleProcessRoute,
+    },
+};
+// the only route handler
+function handleProcessRoute(
     req: IncomingMessage,
     res: ServerResponse,
     body: any
-) => {
+) {
     const myUrl = new URL(req.url!, `http://${req.headers.host}`);
     const query = myUrl.searchParams;
     const token = query.get("token");
@@ -41,14 +63,22 @@ const handleProcessRoute = (
     });
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("Success");
-};
-const routing: RouteDefinition = {
-    POST: {
-        "/pubsub/push": handleProcessRoute,
-    },
+}
+
+const parseBody = (req: IncomingMessage, body: Buffer) => {
+    let parsedBody;
+    //parsing JSON body
+    if (req.headers["content-type"] === "application/json") {
+        try {
+            parsedBody = JSON.parse(body.toString());
+        } catch (error) {
+            parsedBody = {};
+        }
+    }
+    return parsedBody;
 };
 
-const handleRequests = (
+const serveRequests = (
     req: IncomingMessage,
     res: ServerResponse,
     body: Buffer
@@ -64,6 +94,7 @@ const handleRequests = (
     res.end(JSON.stringify({ message: "Route was not found" }));
 };
 
+/* HTTP server */
 const server = http.createServer((req, res) => {
     let chunks: any[] = [];
     req.on("data", (chunk) => {
@@ -71,17 +102,9 @@ const server = http.createServer((req, res) => {
     });
     req.on("end", () => {
         try {
-            const body = Buffer.concat(chunks);
-            //parsing JSON body
-            let parsedBody;
-            if (req.headers["content-type"] === "application/json") {
-                try {
-                    parsedBody = JSON.parse(body.toString());
-                } catch (error) {
-                    parsedBody = {};
-                }
-            }
-            handleRequests(req, res, parsedBody);
+            const rawBody = Buffer.concat(chunks);
+            const body = parseBody(req, rawBody);
+            serveRequests(req, res, body);
         } catch (error) {
             console.log(error);
             res.writeHead(500, { "Content-Type": "application/json" });
@@ -94,14 +117,8 @@ const server = http.createServer((req, res) => {
     });
 });
 
+/* WS server */
 const wss = new WebSocketServer({ server });
-type videoFile = { rawName: string };
-const queue: Bull.Queue<videoFile> = new Bull("transcode");
-
-queue.process(async (job) => {
-    const { rawName } = job.data;
-    await processVideo(rawName);
-});
 
 export const wsChat: {
     sendTo: (socketId: string, message: string | Object) => void;
@@ -129,9 +146,11 @@ wss.on("connection", (socket) => {
 
 // Start the server
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-    //connect to db
-    mongoose.set("strictQuery", false);
-    mongoose.connect(process.env.MONGO_URL!);
-    console.log(`server is running on port ${PORT}...`);
+server.listen(PORT, async () => {
+    try {
+        await mongoose.connect(process.env.MONGO_URL!);
+        console.log(`server is running on port ${PORT}...`);
+    } catch (error) {
+        console.log("Connection to db failed...");
+    }
 });

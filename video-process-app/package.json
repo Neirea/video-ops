@@ -14,12 +14,12 @@
         "@ffmpeg-installer/ffmpeg": "^1.1.0",
         "@google-cloud/pubsub": "^3.7.1",
         "@google-cloud/storage": "^6.11.0",
-        "bull": "^4.10.4",
         "dotenv": "^16.3.1",
         "ffprobe": "^1.1.2",
         "ffprobe-static": "^3.1.0",
         "fluent-ffmpeg": "^2.1.2",
         "mongoose": "^7.3.0",
+        "redis": "^4.6.7",
         "ws": "^8.12.1"
     },
     "devDependencies": {

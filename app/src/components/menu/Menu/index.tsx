@@ -12,7 +12,7 @@ import {
     getUploadUrls,
     splitBuffer,
     trackUpload,
-} from "./utils";
+} from "./uploadUtils";
 
 const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [token, setToken] = useState("");
@@ -66,6 +66,60 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
         });
     }
 
+    async function uploadFile(ev: ProgressEvent<FileReader>, fileName: string) {
+        if (!ev.target?.result) return;
+        const fileSize = (ev.target.result as ArrayBuffer).byteLength;
+        if (fileSize > 2 * 10 ** 9) return;
+        let CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
+        const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
+
+        //can't do more than 10000 chunks for upload
+        const isSuccess = chunkCount <= 10000;
+        if (!isSuccess) {
+            setStatus("Wrong file format");
+            return;
+        }
+
+        setIsUploading(true);
+        setStatus("Initializing upload");
+
+        try {
+            //initialize upload
+            const { UploadId, Key } = await createUpload(token, fileName);
+
+            //get urls for client to upload file chunks
+            const parts = await getUploadUrls(token, UploadId, Key, chunkCount);
+            //split file into chunks
+            const chunksArray = splitBuffer(
+                ev.target.result,
+                chunkCount,
+                CHUNK_SIZE
+            );
+            setStatus("0%");
+            //track each of the upload part
+            const handleStatus = (v: string) => {
+                setStatus(v);
+            };
+            const results = await trackUpload(
+                chunksArray,
+                fileSize,
+                parts,
+                handleStatus
+            );
+            //finish uploading
+            setStatus("Please wait. Some items might be in a queue...");
+            await completeUpload(token, UploadId, Key, results);
+            setIsUploading(false);
+            setIsTranscoding(true);
+            setStage(1);
+            //check status with websockets
+            trackUploadStatus(fileName);
+        } catch (error: any) {
+            setIsUploading(false);
+            setStatus(error.message);
+        }
+    }
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         const file = selectedFile;
@@ -73,70 +127,11 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
 
         if (fileNameInput.length < 2) return;
         if (!file) return;
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        const fileName =
+            fileNameInput + "@@@" + generateShortId() + `.${extension}`;
 
-        fileReader.onload = async (ev) => {
-            if (!ev.target?.result) return;
-            const fileSize = (ev.target.result as ArrayBuffer).byteLength;
-            if (fileSize > 2 * 10 ** 9) return;
-            let CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
-            const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
-
-            //generate file name
-            const extension = file.name.split(".").pop()?.toLowerCase();
-            const fileName =
-                fileNameInput + "@@@" + generateShortId() + `.${extension}`;
-
-            //can't do more than 10000 chunks for upload
-            const isSuccess = chunkCount <= 10000;
-            if (!isSuccess) {
-                setStatus("Wrong file format");
-                return;
-            }
-
-            setIsUploading(true);
-            setStatus("Initializing upload");
-
-            try {
-                //initialize upload
-                const { UploadId, Key } = await createUpload(token, fileName);
-
-                //get urls for client to upload file chunks
-                const parts = await getUploadUrls(
-                    token,
-                    UploadId,
-                    Key,
-                    chunkCount
-                );
-                //split file into chunks
-                const chunksArray = splitBuffer(
-                    ev.target.result,
-                    chunkCount,
-                    CHUNK_SIZE
-                );
-                setStatus("0%");
-                //track each of the upload part
-                const handleStatus = (v: string) => {
-                    setStatus(v);
-                };
-                const results = await trackUpload(
-                    chunksArray,
-                    fileSize,
-                    parts,
-                    handleStatus
-                );
-                //finish uploading
-                setStatus("Finalizing upload...");
-                await completeUpload(token, UploadId, Key, results);
-                setIsUploading(false);
-                setIsTranscoding(true);
-                setStage(1);
-                //check status with websockets
-                trackUploadStatus(fileName);
-            } catch (error: any) {
-                setIsUploading(false);
-                setStatus(error.message);
-            }
-        };
+        fileReader.onload = async (ev) => uploadFile(ev, fileName);
         fileReader.readAsArrayBuffer(file);
     }
 

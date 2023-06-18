@@ -32,6 +32,9 @@ queue.process(async (job) => {
     await processVideo(rawName);
 });
 
+process.on("SIGINT", queueClient.disconnect);
+process.on("SIGTERM", queueClient.disconnect);
+
 // routes
 const routing: RouteDefinition = {
     POST: {
@@ -99,8 +102,7 @@ const server = http.createServer((req, res) => {
     let chunks: any[] = [];
     req.on("data", (chunk) => {
         chunks.push(chunk);
-    });
-    req.on("end", () => {
+    }).on("end", () => {
         try {
             const rawBody = Buffer.concat(chunks);
             const body = parseBody(req, rawBody);

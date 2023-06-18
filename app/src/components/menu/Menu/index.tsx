@@ -107,7 +107,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 handleStatus
             );
             //finish uploading
-            setStatus("Please wait. Some items might be in a queue...");
+            setStatus("Please wait...");
             await completeUpload(token, UploadId, Key, results);
             setIsUploading(false);
             setIsTranscoding(true);

@@ -1,5 +1,5 @@
 import { Storage } from "@google-cloud/storage";
-import { wsChat } from ".";
+import { closeConnection, wsChat } from ".";
 import Video from "./model";
 import ffmpeg from "fluent-ffmpeg";
 import ffprobe from "ffprobe";
@@ -43,6 +43,7 @@ export async function processVideo(rawName: string) {
             status: "error",
             msg: "File is too big",
         });
+        closeConnection(rawName);
         await file.delete();
         return;
     }
@@ -59,6 +60,7 @@ export async function processVideo(rawName: string) {
                 status: "error",
                 msg: err.message || "Probe Error",
             });
+            closeConnection(rawName);
             isError = true;
             await file.delete();
             return;
@@ -109,6 +111,7 @@ export async function processVideo(rawName: string) {
             msg: (err as Error).message,
         });
     } finally {
+        closeConnection(rawName);
         //delete junk
         fs.unlink(urlName, () => {});
         await file.delete();

@@ -31,4 +31,4 @@ RUN apk update && apk add --no-cache redis
 
 # Expose port 6379 for the Redis server
 EXPOSE 6379
-CMD redis-server --daemonize yes && node --max-old-space-size=4096 index.js
+CMD redis-server --daemonize yes && node index.js

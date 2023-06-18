@@ -125,15 +125,18 @@ const wss = new WebSocketServer({ server });
 export const wsChat: {
     sendTo: (socketId: string, message: string | Object) => void;
     sockets: {
-        [key: string]: WebSocket;
+        [key: string]: WebSocket | undefined;
     };
 } = {
     sendTo(socketId: string, message: string | Object) {
-        if (wsChat.sockets[socketId]) {
-            wsChat.sockets[socketId].send(JSON.stringify(message));
-        }
+        wsChat.sockets[socketId]?.send(JSON.stringify(message));
     },
     sockets: {},
+};
+
+export const closeConnection = (socketId: string) => {
+    wsChat.sockets[socketId]?.close();
+    wsChat.sockets[socketId] = undefined;
 };
 
 wss.on("connection", (socket) => {

@@ -1,5 +1,6 @@
-import { IncomingMessage, ServerResponse } from "node:http";
 import fs from "node:fs/promises";
+import { IncomingMessage, ServerResponse } from "node:http";
+import querystring from "node:querystring";
 import { queue } from ".";
 import { setupDevCors } from "./utils/devCors";
 
@@ -13,11 +14,11 @@ export function handleUpload(
         handleTestUpload(req, res, body);
         return;
     }
-    const query = new URLSearchParams(req.url);
-    const token = query.get("token");
 
+    const queryString = req.url?.split("?")[1] || "";
+    const { token } = querystring.parse(queryString);
     if (token !== process.env.PUBSUB_VERIFICATION_TOKEN) {
-        console.error(`wrong env: ${process.env.PUBSUB_VERIFICATION_TOKEN}`);
+        console.error(`wrong token: ${token}`);
         res.end();
         return;
     }

@@ -116,7 +116,11 @@ export function splitBuffer(
 }
 
 export function createWSConnection(fileName: string) {
-    const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
+    const url =
+        process.env.NODE_ENV !== "production"
+            ? "ws://localhost:8080"
+            : process.env.NEXT_PUBLIC_WS_URL!;
+    const socket = new WebSocket(url);
     socket.addEventListener("open", () => {
         socket.send(
             JSON.stringify({

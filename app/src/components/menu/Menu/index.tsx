@@ -83,6 +83,29 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
         setIsUploading(true);
         setStatus("Initializing upload");
 
+        if (process.env.NODE_ENV !== "production") {
+            setStatus("Please wait...");
+            //check status with websockets
+            trackUploadStatus(fileName);
+
+            const response = await fetch("http://localhost:8080/test-upload", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "file-name": fileName,
+                },
+                body: ev.target.result,
+            });
+            if (response.ok) {
+                setStage(1);
+                setIsUploading(false);
+                setIsTranscoding(true);
+            } else {
+                setIsUploading(false);
+            }
+            return;
+        }
+
         try {
             //initialize upload
             const { UploadId, Key } = await createUpload(token, fileName);

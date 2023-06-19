@@ -41,7 +41,19 @@ const server = http.createServer((req, res) => {
             const rawBody = Buffer.concat(chunks);
             const body = parseBody(req, rawBody);
             // the only route
-            handleUpload(req, res, body);
+            if (
+                req.url?.startsWith("/pubsub/push") &&
+                (req.method === "OPTIONS" || req.method === "POST")
+            ) {
+                handleUpload(req, res, body);
+            } else {
+                res.writeHead(404, { "Content-Type": "application/json" });
+                res.end(
+                    JSON.stringify({
+                        message: "Route was not found",
+                    })
+                );
+            }
         } catch (error) {
             console.log(error);
             res.writeHead(500, { "Content-Type": "application/json" });

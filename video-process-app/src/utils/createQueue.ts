@@ -1,10 +1,10 @@
-import { RedisClientType } from "redis";
+import { RedisClientType, createClient } from "redis";
 
 type Job<T> = {
     data: T;
 };
 
-export default class AsyncQueue<T extends Object> {
+class AsyncQueue<T extends Object> {
     private queueName: string;
     private redisClient: RedisClientType<any, any, any>;
     private maxWorkers: number;
@@ -70,10 +70,9 @@ export default class AsyncQueue<T extends Object> {
                 // Max retries reached, give up on the task
                 console.error(`Max retries reached for task.`);
             }
-        } finally {
-            this.activeWorkers--;
-            await this.processLoop();
         }
+        this.activeWorkers--;
+        await this.processLoop();
 
         return true;
     }
@@ -84,3 +83,24 @@ function sleep(delay: number) {
         setTimeout(resolve, delay);
     });
 }
+
+const createRedisClient = () => {
+    const getRedisClient = () => {
+        const redisClient = createClient();
+        redisClient.on("error", (error) => {
+            console.error(error);
+            process.exit(1);
+        });
+        redisClient.connect();
+        return redisClient;
+    };
+    const client = getRedisClient();
+    return client;
+};
+
+export const createQueue = <T extends Object>() => {
+    // queue
+    const queueClient = createRedisClient();
+    const queue = new AsyncQueue<T>(queueClient, "transcode");
+    return queue;
+};

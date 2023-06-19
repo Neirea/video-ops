@@ -1,11 +1,13 @@
+import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import { Storage } from "@google-cloud/storage";
-import { closeConnection, wsChat } from ".";
-import Video from "./model";
-import ffmpeg from "fluent-ffmpeg";
 import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
-import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
+import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
+import { wsChat } from ".";
+import Video from "./model";
+
+const isProd = process.env.NODE_ENV === "production";
 
 const storage = new Storage({
     projectId: process.env.GOOGLE_STORAGE_PROJECT_ID,
@@ -34,21 +36,9 @@ export async function processVideo(rawName: string) {
     const videoName = splitRawName[0];
     const fileName = splitRawName[1];
     const urlName = fileName.split(".")[0]; // video_name
-    //get file out of storage
-    const file = bucket_raw.file(rawName);
-    //check file size
-    const metadata = await file.getMetadata();
-    if (metadata[0].size > 2 * 10 ** 9) {
-        wsChat.sendTo(rawName, {
-            status: "error",
-            msg: "File is too big",
-        });
-        closeConnection(rawName);
-        await file.delete();
-        return;
-    }
-    await file.download({ destination: urlName });
 
+    const file = await downloadVideoFile(rawName, urlName);
+    if (!file) return;
     //check if input file is video file
     let isError = false;
     const commandsBatch = [];
@@ -60,7 +50,6 @@ export async function processVideo(rawName: string) {
                 status: "error",
                 msg: err.message || "Probe Error",
             });
-            closeConnection(rawName);
             isError = true;
             await file.delete();
             return;
@@ -94,12 +83,14 @@ export async function processVideo(rawName: string) {
 
     try {
         await Promise.all(commandsBatch);
+        if (isProd) {
+            //save it to DB
+            await Video.create({
+                name: videoName,
+                url: urlName,
+            });
+        }
 
-        //save it to DB
-        await Video.create({
-            name: videoName,
-            url: urlName,
-        });
         wsChat.sendTo(rawName, {
             status: "done",
             msg: urlName,
@@ -111,7 +102,6 @@ export async function processVideo(rawName: string) {
             msg: (err as Error).message,
         });
     } finally {
-        closeConnection(rawName);
         //delete junk
         fs.unlink(urlName, () => {});
         await file.delete();
@@ -136,7 +126,9 @@ function ffmpegCommand(input: string, height: number) {
     const width = Math.ceil((height / 9) * 16);
     const outputFileName = `${input}_${height}.mp4`;
     const outputTmp = "tmp-" + outputFileName;
-    const outputStream = bucket_prod.file(outputFileName).createWriteStream();
+    const outputStream = isProd
+        ? bucket_prod.file(outputFileName).createWriteStream()
+        : fs.createWriteStream(outputFileName);
 
     return new Promise((resolve, reject) => {
         ffmpeg(input)
@@ -175,7 +167,9 @@ function ffmpegCommand(input: string, height: number) {
 function ffmpegScrn(input: string, duration: number) {
     const outputFileName = `${input.split(".")[0]}.webp`;
     const frameInterval = duration / 100;
-    const outputStream = bucket_prod.file(outputFileName).createWriteStream();
+    const outputStream = isProd
+        ? bucket_prod.file(outputFileName).createWriteStream()
+        : fs.createWriteStream(outputFileName);
 
     return new Promise((resolve, reject) => {
         ffmpeg(input)
@@ -200,4 +194,24 @@ function ffmpegScrn(input: string, duration: number) {
             })
             .run();
     });
+}
+
+async function downloadVideoFile(rawName: string, destination: string) {
+    if (!isProd) {
+        return { delete: () => {} };
+    }
+    //get file out of storage
+    const file = bucket_raw.file(rawName);
+    //check file size
+    const metadata = await file.getMetadata();
+    if (metadata[0].size > 2 * 10 ** 9) {
+        wsChat.sendTo(rawName, {
+            status: "error",
+            msg: "File is too big",
+        });
+        await file.delete();
+        return;
+    }
+    await file.download({ destination });
+    return file;
 }

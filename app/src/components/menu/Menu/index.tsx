@@ -88,7 +88,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
             //check status with websockets
             trackUploadStatus(fileName);
 
-            const response = await fetch("http://localhost:8080/test-upload", {
+            const response = await fetch("http://localhost:8080/pubsub/push", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/octet-stream",

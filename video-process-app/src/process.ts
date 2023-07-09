@@ -39,9 +39,6 @@ export async function processVideo(rawName: string) {
 
     const file = await downloadVideoFile(rawName, urlName);
     if (!file) return;
-    //check if input file is video file
-    let isError = false;
-    const commandsBatch = [];
 
     ffprobe(urlName, { path: ffprobeStatic.path }, async (err, info) => {
         const duration = info.streams[0].duration;
@@ -50,10 +47,10 @@ export async function processVideo(rawName: string) {
                 status: "error",
                 msg: err.message || "Probe Error",
             });
-            isError = true;
             await file.delete();
             return;
         }
+        const commandsBatch = [];
         commandsBatch.push(
             ffmpegScrn(urlName, duration).then((res) => {
                 wsChat.sendTo(rawName, {
@@ -63,58 +60,71 @@ export async function processVideo(rawName: string) {
                 return res;
             })
         );
+        const videoDuration = Math.trunc(duration);
         wsChat.sendTo(rawName, {
             status: "checked",
-            msg: `Video is valid with duration ${Math.trunc(duration)}s`,
+            msg: `Video is valid with duration ${videoDuration}s`,
         });
-    });
 
-    if (isError) return;
+        const height480 = 480;
+        const height720 = 720;
+        const height1080 = 1080;
 
-    const height480 = 480;
-    const height720 = 720;
-    const height1080 = 1080;
+        //process files
+        commandsBatch.push(
+            videoTrancodeCommand(urlName, height480, rawName, videoDuration)
+        );
+        commandsBatch.push(
+            videoTrancodeCommand(urlName, height720, rawName, videoDuration)
+        );
+        commandsBatch.push(
+            videoTrancodeCommand(urlName, height1080, rawName, videoDuration)
+        );
+        console.log(`Starting transcoding video - ${urlName}`);
 
-    //process files
-    commandsBatch.push(videoTrancodeCommand(urlName, rawName, height480));
-    commandsBatch.push(videoTrancodeCommand(urlName, rawName, height720));
-    commandsBatch.push(videoTrancodeCommand(urlName, rawName, height1080));
-    console.log(`Starting transcoding video - ${urlName}`);
+        try {
+            await Promise.all(commandsBatch);
+            if (isProd) {
+                //save it to DB
+                await Video.create({
+                    name: videoName,
+                    url: urlName,
+                });
+            }
 
-    try {
-        await Promise.all(commandsBatch);
-        if (isProd) {
-            //save it to DB
-            await Video.create({
+            wsChat.sendTo(rawName, {
+                status: "done",
+                msg: urlName,
                 name: videoName,
-                url: urlName,
             });
+        } catch (err) {
+            wsChat.sendTo(rawName, {
+                status: "error",
+                msg: (err as Error).message,
+            });
+        } finally {
+            //delete junk
+            fs.unlink(urlName, () => {});
+            await file.delete();
         }
-
-        wsChat.sendTo(rawName, {
-            status: "done",
-            msg: urlName,
-            name: videoName,
-        });
-    } catch (err) {
-        wsChat.sendTo(rawName, {
-            status: "error",
-            msg: (err as Error).message,
-        });
-    } finally {
-        //delete junk
-        fs.unlink(urlName, () => {});
-        await file.delete();
-    }
+    });
 }
 
 async function videoTrancodeCommand(
     urlName: string,
-    rawName: string,
-    height: number
+    height: number,
+    websocketId: string,
+    videoDuration: number
 ) {
-    return ffmpegCommand(urlName, height).then((res) => {
-        wsChat.sendTo(rawName, {
+    const sendProgress = (frames: number) => {
+        const percent = Math.round((frames / (30 * videoDuration)) * 100);
+        wsChat.sendTo(websocketId, {
+            status: "progress",
+            msg: { [height]: percent },
+        });
+    };
+    return ffmpegCommand(urlName, height, sendProgress).then((res) => {
+        wsChat.sendTo(websocketId, {
             status: "processed",
             msg: `${height}p`,
         });
@@ -122,7 +132,11 @@ async function videoTrancodeCommand(
     });
 }
 
-function ffmpegCommand(input: string, height: number) {
+function ffmpegCommand(
+    input: string,
+    height: number,
+    sendProgress: (frames: number) => void
+) {
     const width = Math.ceil((height / 9) * 16);
     const outputFileName = `${input}_${height}.mp4`;
     const outputTmp = "tmp-" + outputFileName;
@@ -147,6 +161,9 @@ function ffmpegCommand(input: string, height: number) {
                 "-crf 28", //scale bitrate dynamically
             ])
             .output(outputTmp)
+            .on("progress", (progress) => {
+                sendProgress(progress.frames);
+            })
             .on("end", async () => {
                 //upload to google cloud storage
                 fs.createReadStream(outputTmp)

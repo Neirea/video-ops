@@ -14,6 +14,8 @@ import {
     trackUpload,
 } from "./uploadUtils";
 
+const defaultProgress = { "480": 0, "720": 0, "1080": 0 };
+
 const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [token, setToken] = useState("");
     const [fileNameInput, setFileNameInput] = useState("");
@@ -22,6 +24,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [isTranscoding, setIsTranscoding] = useState(false);
     const [status, setStatus] = useState("");
     const [stage, setStage] = useState(0);
+    const [progress, setProgress] = useState(defaultProgress);
 
     const isDisabled = isUploading || isTranscoding;
 
@@ -51,6 +54,10 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 setStage(2);
                 setStatus(msg);
             }
+            if (status === "progress") {
+                const [key, value] = Object.entries(msg)[0];
+                setProgress((prev) => ({ ...prev, [key]: value }));
+            }
             if (status === "processed") {
                 setStatus(msg + " processed");
                 if (msg === "1080p") setStage(3);
@@ -59,6 +66,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                 setStatus("Finished transcoding");
                 setStage(0);
                 setIsTranscoding(false);
+                setProgress(defaultProgress);
                 //refetch video list
                 fetchVideos();
                 socket.close();
@@ -192,7 +200,7 @@ const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
                     {selectedFile?.name}
                 </div>
                 {isTranscoding ? (
-                    <Transcoding stage={stage} />
+                    <Transcoding stage={stage} progress={progress} />
                 ) : (
                     <Button
                         type="submit"

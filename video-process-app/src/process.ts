@@ -6,6 +6,7 @@ import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import { wsChat } from ".";
 import Video from "./model";
+import { throttle } from "./utils/throttle";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -123,7 +124,9 @@ async function videoTrancodeCommand(
             msg: { [height]: percent },
         });
     };
-    return ffmpegCommand(urlName, height, sendProgress).then((res) => {
+    const sendProgressThottled = throttle(sendProgress, 3000);
+
+    return ffmpegCommand(urlName, height, sendProgressThottled).then((res) => {
         wsChat.sendTo(websocketId, {
             status: "processed",
             msg: `${height}p`,

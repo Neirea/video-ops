@@ -1,9 +1,15 @@
+export type IProgress = {
+    "480": number;
+    "720": number;
+    "1080": number;
+};
+
 const Transcoding = ({
     stage,
     progress,
 }: {
     stage: number;
-    progress: { [key: string]: number };
+    progress: IProgress;
 }) => {
     const stage1 = stage === 1 ? "ACTIVE" : stage > 1 ? "COMPLETE" : "INACTIVE";
     const stage2 = stage === 2 ? "ACTIVE" : stage > 2 ? "COMPLETE" : "INACTIVE";
@@ -30,12 +36,9 @@ const Transcoding = ({
             </ul>
             {stage === 2 && (
                 <ul className="flex flex-col gap-2 w-[70%]">
-                    {Object.keys(progress).map((key) => {
+                    {Object.entries(progress).map(([key, value]) => {
                         return (
-                            <VideoStatusItem
-                                key={`vsi-${key}`}
-                                percent={progress[key]}
-                            >
+                            <VideoStatusItem key={`vsi-${key}`} percent={value}>
                                 {`${key}p`}
                             </VideoStatusItem>
                         );

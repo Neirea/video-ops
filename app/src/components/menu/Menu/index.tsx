@@ -4,7 +4,7 @@ import Button from "../../Button";
 import FileInput from "../../FileInput";
 import FormInput from "../../FormInput";
 import Heading from "../../HeadingOne";
-import Transcoding from "../Transcoding";
+import Transcoding, { IProgress } from "../Transcoding";
 import {
     completeUpload,
     createUpload,
@@ -14,7 +14,7 @@ import {
     trackUpload,
 } from "./uploadUtils";
 
-const defaultProgress = { "480": 0, "720": 0, "1080": 0 };
+const defaultProgress: IProgress = { "480": 0, "720": 0, "1080": 0 };
 
 const Menu = ({ fetchVideos }: { fetchVideos: () => void }) => {
     const [token, setToken] = useState("");

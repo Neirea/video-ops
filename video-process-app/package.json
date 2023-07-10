@@ -1,15 +1,12 @@
 {
     "name": "video-process-app",
     "version": "1.0.1",
-    "description": "",
+    "private": true,
     "scripts": {
         "start": "node build/index.js",
         "build": "tsc -p .",
         "dev": "tsnd --respawn ./src/index.ts"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
     "dependencies": {
         "@ffmpeg-installer/ffmpeg": "^1.1.0",
         "@google-cloud/pubsub": "^3.7.1",

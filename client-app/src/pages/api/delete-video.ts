@@ -18,7 +18,7 @@ export default async function handler(
     const token = req.headers["token"] as string;
     const tokens = await Token.find({ charges: { $gte: 1 } });
     if (!tokens.map((i) => i.token).includes(token)) {
-        res.status(403).json({ message: "Acess Denied" });
+        res.status(403).json({ message: "Access Denied" });
         return;
     }
     try {

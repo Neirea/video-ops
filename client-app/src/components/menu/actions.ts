@@ -16,8 +16,8 @@ export async function createUpload(token: string, fileName: string) {
     await dbConnect();
     const tokens = await Token.find({ charges: { $gte: 1 } });
     if (!tokens.map((i) => i.token).includes(token)) {
-        //fix
-        return { message: "Access Denied" };
+        throw new Error("Access Denied");
+        // return { error: "Access Denied" };
     }
 
     const key = fileName;
@@ -39,8 +39,7 @@ export async function getUploadUrls(
     await dbConnect();
     const tokens = await Token.find({ charges: { $gte: 1 } });
     if (!tokens.map((i) => i.token).includes(token)) {
-        // return { message: "Access Denied" };
-        return { parts: [] }; //fix
+        throw new Error("Access Denied");
     }
 
     const promises = [];
@@ -77,7 +76,7 @@ export async function completeUpload(
     await dbConnect();
     const tokens = await Token.find({ charges: { $gte: 1 } });
     if (!tokens.map((i) => i.token).includes(token)) {
-        return { message: "Access Denied" };
+        throw new Error("Access Denied");
     }
     const command = new CompleteMultipartUploadCommand({
         Bucket: BUCKET_NAME,

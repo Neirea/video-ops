@@ -149,7 +149,7 @@ const Menu = () => {
             trackUploadStatus(fileName);
         } catch (error: any) {
             setIsUploading(false);
-            setStatus(error.message);
+            setStatus("Failed to upload");
         }
     }
 

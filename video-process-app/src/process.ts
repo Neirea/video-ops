@@ -42,7 +42,7 @@ export async function processVideo(rawName: string) {
     if (!file) return;
 
     ffprobe(urlName, { path: ffprobeStatic.path }, async (err, info) => {
-        const duration = info.streams[0].duration;
+        const duration = Number(info.streams[0].duration);
         if (err || !duration) {
             wsChat.sendTo(rawName, {
                 status: "error",

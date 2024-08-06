@@ -1,5 +1,5 @@
 "use client";
-import React, { ButtonHTMLAttributes } from "react";
+import React, { type ButtonHTMLAttributes } from "react";
 
 const ControlButton = ({
     children,

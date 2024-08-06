@@ -1,11 +1,11 @@
 "use client";
 import generateShortId from "@/src/utils/generateShortId";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 import Button from "../Button";
 import FileInput from "../FileInput";
 import FormInput from "../FormInput";
 import Heading from "../HeadingOne";
-import Transcoding, { IProgress } from "./Transcoding";
+import Transcoding, { type IProgress } from "./Transcoding";
 import { completeUpload, createUpload, getUploadUrls } from "./actions";
 import { createWSConnection, splitBuffer, trackUpload } from "./utils";
 import { useRouter } from "next/navigation";

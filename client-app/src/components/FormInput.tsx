@@ -1,4 +1,4 @@
-import { ChangeEvent, useId } from "react";
+import { useId, type ChangeEvent } from "react";
 
 type FormInputProps = {
     value: string;

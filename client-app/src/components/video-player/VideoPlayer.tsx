@@ -1,13 +1,13 @@
 "use client";
 import useDelayedValue from "@/src/hooks/useDelayedValue";
 import { useOutsideClick } from "@/src/hooks/useOutsideClick";
-import { VideoType } from "@/src/models/Video";
+import type { VideoType } from "@/src/models/Video";
 import formatDuration from "@/src/utils/formatDuration";
 import {
-    ChangeEvent,
-    MouseEvent,
-    SyntheticEvent,
-    TouchEvent,
+    type ChangeEvent,
+    type MouseEvent,
+    type SyntheticEvent,
+    type TouchEvent,
     useEffect,
     useRef,
     useState,

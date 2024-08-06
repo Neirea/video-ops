@@ -2,7 +2,7 @@ import dbConnect from "@/src/lib/db";
 import { Token } from "@/src/models/Token";
 import { Video } from "@/src/models/Video";
 import { storage } from "@/src/utils/storage";
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
     req: NextApiRequest,

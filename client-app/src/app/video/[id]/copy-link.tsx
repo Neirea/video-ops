@@ -1,6 +1,7 @@
 "use client";
 import getIframeLink from "@/src/utils/getIframeLink";
-import { useState, useEffect, MouseEvent } from "react";
+import { useState, useEffect } from "react";
+import type { MouseEvent } from "react";
 
 const CopyLink = ({ url }: { url: string }) => {
     const [origin, setOrigin] = useState("");

@@ -1,4 +1,4 @@
-import { MutableRefObject, useEffect } from "react";
+import { type MutableRefObject, useEffect } from "react";
 
 /* Hook that sets state to false on click outside of the passed ref */
 export const useOutsideClick = (

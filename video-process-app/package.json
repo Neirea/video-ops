@@ -15,7 +15,7 @@
         "ffprobe": "^1.1.2",
         "ffprobe-static": "^3.1.0",
         "fluent-ffmpeg": "^2.1.2",
-        "mongoose": "^7.3.0",
+        "mongoose": "^8.8.3",
         "redis": "^4.6.7",
         "ws": "^8.12.1"
     },

@@ -80,6 +80,11 @@ const VideoPlayer = ({
     });
 
     useEffect(() => {
+        // start video loading with this quality
+        setQuality(toNumber(localStorage.getItem("vo-quality")) || 1080);
+        if (type !== "normal") return;
+
+        const controller = new AbortController();
         const keyboardHandler = (e: KeyboardEvent) => {
             const tagName = document.activeElement?.tagName.toLowerCase();
 
@@ -104,15 +109,11 @@ const VideoPlayer = ({
                     break;
             }
         };
-        if (type === "normal") {
-            document.addEventListener("keydown", keyboardHandler);
-        }
-        // start video loading with this quality
-        setQuality(toNumber(localStorage.getItem("vo-quality")) || 1080);
+        document.addEventListener("keydown", keyboardHandler, {
+            signal: controller.signal,
+        });
         return () => {
-            if (type === "normal") {
-                document.removeEventListener("keydown", keyboardHandler);
-            }
+            controller.abort();
         };
     }, []);
 
@@ -126,15 +127,22 @@ const VideoPlayer = ({
             handleTimelineUpdate(e, isScrubbing);
         }, throttleDelay);
 
-        document.addEventListener("touchmove", handleMove);
-        document.addEventListener("touchend", handleEnd);
-        document.addEventListener("mousemove", handleMove);
-        document.addEventListener("mouseup", handleEnd);
+        const controller = new AbortController();
+
+        document.addEventListener("touchmove", handleMove, {
+            signal: controller.signal,
+        });
+        document.addEventListener("touchend", handleEnd, {
+            signal: controller.signal,
+        });
+        document.addEventListener("mousemove", handleMove, {
+            signal: controller.signal,
+        });
+        document.addEventListener("mouseup", handleEnd, {
+            signal: controller.signal,
+        });
         return () => {
-            document.removeEventListener("touchmove", handleMove);
-            document.removeEventListener("touchend", handleEnd);
-            document.removeEventListener("mousemove", handleMove);
-            document.removeEventListener("mouseup", handleEnd);
+            controller.abort();
         };
     }, [isScrubbing]);
 

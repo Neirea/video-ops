@@ -1,5 +1,5 @@
 # STAGE 1
-FROM node:16 as initial
+FROM node:20 as initial
 WORKDIR /app
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
@@ -12,7 +12,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # STAGE 2
-FROM node:16-alpine
+FROM node:20-alpine
 ENV NODE_ENV production
 WORKDIR /app
 

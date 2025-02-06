@@ -1,4 +1,3 @@
-import "dotenv/config";
 import http from "http";
 import mongoose from "mongoose";
 import { WebSocketServer } from "ws";

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import { IncomingMessage, ServerResponse } from "node:http";
 import querystring from "node:querystring";
-import { queue } from ".";
-import { setupDevCors } from "./utils/devCors";
+import { queue } from "./index.js";
+import { setupDevCors } from "./utils/devCors.js";
 
 // production upload handler
 export function handleUpload(
@@ -38,18 +38,28 @@ export function handleUpload(
 async function handleTestUpload(
     req: IncomingMessage,
     res: ServerResponse,
-    body: Buffer
+    body: string
 ) {
     //dev cors
     const isPreflight = setupDevCors(req, res);
     if (isPreflight) return;
-    const rawName = req.headers["file-name"] as string;
+    const rawName = req.headers["file-name"];
+    if (!rawName || typeof rawName !== "string") {
+        console.error("Missing or invalid 'file-name' header");
+        res.end();
+        return;
+    }
     const splitRawName = rawName.split("@@@");
     const fileName = splitRawName[1];
-    const urlName = fileName.split(".")[0]; // video_name
-    await fs.writeFile(urlName, body); //download on disk
+    const urlName = fileName?.split(".")[0];
+    if (!urlName) {
+        console.error("Failed to parse video name");
+        res.end();
+        return;
+    }
+    await fs.writeFile(urlName, body);
     queue.add({
         rawName,
     });
-    res.end("success");
+    res.end("Success");
 }

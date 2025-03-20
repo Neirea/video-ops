@@ -1,10 +1,10 @@
 import http from "http";
 import mongoose from "mongoose";
 import { WebSocketServer } from "ws";
-import { handleUpload } from "./controllers";
-import { processVideo } from "./process";
-import Connections from "./utils/WSChat";
-import { createQueue } from "./utils/createQueue";
+import { handleUpload } from "./controllers.js";
+import { processVideo } from "./process.js";
+import Connections from "./utils/WSChat.js";
+import { createQueue } from "./utils/createQueue.js";
 
 type videoFile = { rawName: string };
 

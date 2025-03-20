@@ -4,9 +4,9 @@ import ffprobe from "ffprobe";
 import ffprobeStatic from "ffprobe-static";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
-import { wsChat } from ".";
-import Video from "./model";
-import { throttle } from "./utils/throttle";
+import { wsChat } from "./index.js";
+import Video from "./model.js";
+import { throttle } from "./utils/throttle.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -28,21 +28,23 @@ const bucket_prod = storage.bucket("prod-video-streaming");
 export async function processVideo(rawName: string) {
     // The pub/sub message is a unicode string encoded in base64.
     const splitRawName = rawName.split("@@@");
-    if (splitRawName.length !== 2) {
-        wsChat.sendTo(rawName, {
-            status: "error",
-            msg: "Failed to proceed transcoding",
-        });
-    }
     const videoName = splitRawName[0];
     const fileName = splitRawName[1];
-    const urlName = fileName.split(".")[0]; // video_name
+    const urlName = fileName?.split(".")[0]; // video_name
+
+    if (!urlName) {
+        wsChat.sendTo(rawName, {
+            status: "error",
+            msg: "Failed to parse video name",
+        });
+        return;
+    }
 
     const file = await downloadVideoFile(rawName, urlName);
     if (!file) return;
 
     ffprobe(urlName, { path: ffprobeStatic.path }, async (err, info) => {
-        const duration = Number(info.streams[0].duration);
+        const duration = Number(info.streams[0]?.duration);
         if (err || !duration) {
             wsChat.sendTo(rawName, {
                 status: "error",
@@ -224,7 +226,7 @@ async function downloadVideoFile(rawName: string, destination: string) {
     const file = bucket_raw.file(rawName);
     //check file size
     const metadata = await file.getMetadata();
-    if (metadata[0].size > 2 * 10 ** 9) {
+    if (metadata[0]?.size && +metadata[0].size > 2 * 10 ** 9) {
         wsChat.sendTo(rawName, {
             status: "error",
             msg: "File is too big",

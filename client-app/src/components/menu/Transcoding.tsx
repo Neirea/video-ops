@@ -93,7 +93,7 @@ const StatusCircle = ({
         status === "COMPLETE"
             ? "bg-violet-500"
             : status === "ACTIVE"
-            ? "bg-neutral-800"
+            ? "bg-violet-300"
             : "bg-transparent";
     const borderColor =
         status === "COMPLETE" ? "border-violet-500" : "border-stone-500";

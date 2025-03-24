@@ -1,13 +1,18 @@
 "use client";
 import useDelayedValue from "@/src/hooks/useDelayedValue";
 import { useOutsideClick } from "@/src/hooks/useOutsideClick";
+import useThumbnails from "@/src/hooks/useThumbnails";
 import type { VideoType } from "@/src/models/Video";
 import formatDuration from "@/src/utils/formatDuration";
+import { throttle } from "@/src/utils/throttle";
+import toNumber from "@/src/utils/toNumber";
+import Image from "next/image";
 import {
     type ChangeEvent,
     type MouseEvent,
     type SyntheticEvent,
     type TouchEvent,
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -21,9 +26,6 @@ import VolumeHighIcon from "../icons/VolumeHighIcon";
 import VolumeLowIcon from "../icons/VolumeLowIcon";
 import VolumeMutedIcon from "../icons/VolumeMutedIcon";
 import ControlButton from "./ControlButton";
-import useThumbnails from "@/src/hooks/useThumbnails";
-import { throttle } from "@/src/utils/throttle";
-import toNumber from "@/src/utils/toNumber";
 
 //type support for different browsers
 declare global {
@@ -75,6 +77,103 @@ const VideoPlayer = ({
     const timelineRef = useRef<HTMLDivElement>(null);
 
     const qualityList = [480, 720, 1080];
+
+    const togglePlay = useCallback(async () => {
+        if (!videoRef.current?.duration) return;
+        videoRef.current.paused ? await playVideo() : pauseVideo();
+    }, []);
+    // update timeline
+    const handleTimelineUpdate = useCallback(
+        (
+            e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
+            scrubbing: boolean
+        ) => {
+            const previewImg = previewImgRef.current;
+            const thumbnailImg = thumbnailImgRef.current;
+            const timelineContainer = timelineRef.current;
+            if (!timelineContainer) return;
+            if (!previewImg) return;
+            if (!thumbnailImg) return;
+
+            let x = 0;
+            if ("touches" in e) {
+                x = e.changedTouches[0].pageX;
+            } else if ("pageX" in e) {
+                e.preventDefault();
+                x = e.pageX;
+            }
+            const rect = timelineContainer.getBoundingClientRect();
+            const percent =
+                Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
+
+            //thumbnail image
+            const previewImgSrc = thumbnails[Math.floor(percent * 100)];
+            if (previewImgSrc && previewImg) {
+                previewImg.src = previewImgSrc;
+                if (scrubbing && thumbnailImg) {
+                    thumbnailImg.src = previewImgSrc;
+                }
+            }
+            const previewX =
+                x + previewImg.offsetWidth / 2 > rect.right
+                    ? rect.right - previewImg.offsetWidth / 2
+                    : x - previewImg.offsetWidth / 2 < rect.left
+                    ? rect.left + previewImg.offsetWidth / 2
+                    : x;
+            const previewPercent =
+                Math.min(Math.max(0, previewX - rect.x), rect.width) /
+                rect.width;
+            timelineContainer.style.setProperty(
+                "--preview-position",
+                previewPercent.toString()
+            );
+            if (scrubbing) {
+                timelineContainer.style.setProperty(
+                    "--progress-position",
+                    percent.toString()
+                );
+            }
+        },
+        [thumbnails]
+    );
+    // scrubbing via mouse and touch
+    const toggleScrubbing = useCallback(
+        async (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
+            const video = videoRef.current;
+            const timelineContainer = timelineRef.current;
+            //don't do anything for mouseDown when touchDevice is active
+            if (!timelineContainer) return;
+            if (!video?.duration) return;
+            if (loading) return;
+
+            let scrubbing = false;
+            let coordX = 0;
+            if ("touches" in e) {
+                // touch
+                coordX = e.changedTouches[0].pageX;
+                // targetTouches to determine active touches
+                scrubbing = (e.targetTouches.length & 1) === 1;
+            } else if ("pageX" in e) {
+                // mouse
+                coordX = e.pageX;
+                scrubbing = (e.buttons & 1) === 1;
+            }
+            setIsScrubbing(scrubbing);
+            handleTimelineUpdate(e, scrubbing);
+            if (!scrubbing) {
+                const rect = timelineContainer.getBoundingClientRect();
+                const percent =
+                    Math.min(Math.max(0, coordX - rect.x), rect.width) /
+                    rect.width;
+                video.currentTime = percent * video.duration;
+                if (wasPaused === false) await playVideo();
+                return;
+            }
+            pauseVideo();
+        },
+        [handleTimelineUpdate, loading, wasPaused]
+    );
+
     useOutsideClick([qualityRef], () => {
         setPopup(false);
     });
@@ -115,7 +214,7 @@ const VideoPlayer = ({
         return () => {
             controller.abort();
         };
-    }, []);
+    }, [type, togglePlay]);
 
     useEffect(() => {
         if (!isScrubbing) return;
@@ -144,7 +243,7 @@ const VideoPlayer = ({
         return () => {
             controller.abort();
         };
-    }, [isScrubbing]);
+    }, [isScrubbing, handleTimelineUpdate, toggleScrubbing]);
 
     const handleMouseOverMove = throttle((e) => {
         if (!isScrubbing) handleTimelineUpdate(e, isScrubbing);
@@ -192,91 +291,7 @@ const VideoPlayer = ({
         );
         updateBufferRange();
     }
-    // update timeline
-    function handleTimelineUpdate(
-        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
-        scrubbing: boolean
-    ) {
-        const previewImg = previewImgRef.current;
-        const thumbnailImg = thumbnailImgRef.current;
-        const timelineContainer = timelineRef.current;
-        if (!timelineContainer) return;
-        if (!previewImg) return;
-        if (!thumbnailImg) return;
 
-        let x = 0;
-        if ("touches" in e) {
-            x = e.changedTouches[0].pageX;
-        } else if ("pageX" in e) {
-            e.preventDefault();
-            x = e.pageX;
-        }
-        const rect = timelineContainer.getBoundingClientRect();
-        const percent =
-            Math.min(Math.max(0, x - rect.x), rect.width) / rect.width;
-
-        //thumbnail image
-        const previewImgSrc = thumbnails[Math.floor(percent * 100)];
-        if (previewImgSrc) {
-            previewImgRef.current.src = previewImgSrc;
-            if (scrubbing) {
-                thumbnailImgRef.current.src = previewImgSrc;
-            }
-        }
-        const previewX =
-            x + previewImg.offsetWidth / 2 > rect.right
-                ? rect.right - previewImg.offsetWidth / 2
-                : x - previewImg.offsetWidth / 2 < rect.left
-                ? rect.left + previewImg.offsetWidth / 2
-                : x;
-        const previewPercent =
-            Math.min(Math.max(0, previewX - rect.x), rect.width) / rect.width;
-        timelineContainer.style.setProperty(
-            "--preview-position",
-            previewPercent.toString()
-        );
-        if (scrubbing) {
-            timelineContainer.style.setProperty(
-                "--progress-position",
-                percent.toString()
-            );
-        }
-    }
-    // scrubbing via mouse and touch
-    async function toggleScrubbing(
-        e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
-    ) {
-        const video = videoRef.current;
-        const timelineContainer = timelineRef.current;
-        //don't do anything for mouseDown when touchDevice is active
-        if (!timelineContainer) return;
-        if (!video?.duration) return;
-        if (loading) return;
-
-        let scrubbing = false;
-        let coordX = 0;
-        if ("touches" in e) {
-            // touch
-            coordX = e.changedTouches[0].pageX;
-            // targetTouches to determine active touches
-            scrubbing = (e.targetTouches.length & 1) === 1;
-        } else if ("pageX" in e) {
-            // mouse
-            coordX = e.pageX;
-            scrubbing = (e.buttons & 1) === 1;
-        }
-        setIsScrubbing(scrubbing);
-        handleTimelineUpdate(e, scrubbing);
-        if (!scrubbing) {
-            const rect = timelineContainer.getBoundingClientRect();
-            const percent =
-                Math.min(Math.max(0, coordX - rect.x), rect.width) / rect.width;
-            video.currentTime = percent * video.duration;
-            if (wasPaused === false) await playVideo();
-            return;
-        }
-        pauseVideo();
-    }
     /* EVENT HANDLERS */
     async function handleVideoClick() {
         const video = videoRef.current;
@@ -382,10 +397,6 @@ const VideoPlayer = ({
         setPaused(true);
         videoRef.current.pause();
     }
-    async function togglePlay() {
-        if (!videoRef.current?.duration) return;
-        videoRef.current.paused ? await playVideo() : pauseVideo();
-    }
     function toggleMute() {
         if (!videoRef.current) return;
         videoRef.current.muted = !videoRef.current.muted;
@@ -469,13 +480,18 @@ const VideoPlayer = ({
                 ></div>
             </div>
             {/* thumbnail image */}
-            <img
-                ref={thumbnailImgRef}
-                alt="thumbnail"
-                className={`${
-                    delayedScrubbing ? "block" : "hidden"
-                } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
-            />
+            {thumbnails.length > 0 && (
+                <Image
+                    ref={thumbnailImgRef}
+                    alt="thumbnail"
+                    className={`${
+                        delayedScrubbing ? "block" : "hidden"
+                    } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
+                    src={thumbnails[0]}
+                    width={"128"}
+                    height={"72"}
+                />
+            )}
             {/* video controls container */}
             <div
                 className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
@@ -497,13 +513,19 @@ const VideoPlayer = ({
                         } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-500 after:z-[1]`}
                     >
                         {/* preview image */}
-                        <img
-                            ref={previewImgRef}
-                            alt="preview"
-                            className={`preview-img group-hover/timeline:block ${
-                                delayedScrubbing ? "block" : "hidden"
-                            } absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
-                        />
+                        {thumbnails.length > 0 && (
+                            <Image
+                                ref={previewImgRef}
+                                alt="preview"
+                                className={`preview-img group-hover/timeline:block ${
+                                    delayedScrubbing ? "block" : "hidden"
+                                } absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
+                                src={thumbnails[0]}
+                                width={"128"}
+                                height={"72"}
+                            />
+                        )}
+
                         {/* thumb */}
                         <div
                             className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-violet-500 rounded-full transition-transform aspect-[1/1] z-[2]`}

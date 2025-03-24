@@ -1,5 +1,6 @@
 "use client";
 import generateShortId from "@/src/utils/generateShortId";
+import { useRouter } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import Button from "../Button";
 import FileInput from "../FileInput";
@@ -8,7 +9,6 @@ import Heading from "../HeadingOne";
 import Transcoding, { type IProgress } from "./Transcoding";
 import { completeUpload, createUpload, getUploadUrls } from "./actions";
 import { createWSConnection, splitBuffer, trackUpload } from "./utils";
-import { useRouter } from "next/navigation";
 
 const defaultProgress: IProgress = { "480": 0, "720": 0, "1080": 0 };
 
@@ -170,9 +170,9 @@ const Menu = () => {
 
     return (
         <>
-            <a href="/">
+            <button onClick={() => (window.location.href = "/")}>
                 <Heading>Video Ops</Heading>
-            </a>
+            </button>
             <form
                 onSubmit={handleSubmit}
                 className="flex flex-col items-center gap-4"

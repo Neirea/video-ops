@@ -3,7 +3,8 @@ import dbConnect from "@/src/lib/db";
 import { Video } from "@/src/models/Video";
 import getImageUrl from "@/src/utils/getImageUrl";
 
-const EmbedVideo = async ({ params }: { params: { id: string } }) => {
+const EmbedVideo = async (props: { params: Promise<{ id: string }> }) => {
+    const params = await props.params;
     const { video, imageUrl } = (await getVideoData(params.id)) || {};
     if (!video || !imageUrl) return null;
     return <VideoPlayer type="embed" video={video} imageUrl={imageUrl} />;

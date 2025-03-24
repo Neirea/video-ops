@@ -10,7 +10,8 @@ import CopyLink from "./copy-link";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const { videoNames } = (await getVideoData(params.id)) || {};
     const currentVideo =
         videoNames?.find((i) => i.url == params.id)?.name || "Not Found";
@@ -19,7 +20,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     };
 }
 
-const Page = async ({ params }: { params: { id: string } }) => {
+const Page = async (props: { params: Promise<{ id: string }> }) => {
+    const params = await props.params;
     const videoId = params.id;
     const { videoNames, imageUrl } = (await getVideoData(params.id)) || {};
     const currentVideo = videoNames?.find((i) => i.url == videoId);

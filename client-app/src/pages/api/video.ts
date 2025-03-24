@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { storage } from "@/src/utils/storage";
+import { storage } from "@/utils/storage";
 
 export default async function handler(
     req: NextApiRequest,

@@ -1,16 +1,17 @@
 import { Inter } from "next/font/google";
-import Head from "next/head";
-import Menu from "@/src/components/menu/Menu";
-import UploadedVideos from "@/src/components/menu/UploadedVideos";
-import VideoPlayer from "@/src//components/video-player/VideoPlayer";
-import dbConnect from "@/src//lib/db";
-import { Video } from "@/src//models/Video";
-import getImageUrl from "@/src//utils/getImageUrl";
+import Menu from "@/components/menu/Menu";
+import UploadedVideos from "@/components/menu/UploadedVideos";
+import VideoPlayer from "@//components/video-player/VideoPlayer";
+import dbConnect from "@//lib/db";
+import { Video } from "@//models/Video";
+import getImageUrl from "@//utils/getImageUrl";
 import CopyLink from "./copy-link";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
+export async function generateMetadata(props: {
+    params: Promise<{ id: string }>;
+}) {
     const params = await props.params;
     const { videoNames } = (await getVideoData(params.id)) || {};
     const currentVideo =

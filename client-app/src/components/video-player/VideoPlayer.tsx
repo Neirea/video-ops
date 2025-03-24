@@ -1,11 +1,11 @@
 "use client";
-import useDelayedValue from "@/src/hooks/useDelayedValue";
-import { useOutsideClick } from "@/src/hooks/useOutsideClick";
-import useThumbnails from "@/src/hooks/useThumbnails";
-import type { VideoType } from "@/src/models/Video";
-import formatDuration from "@/src/utils/formatDuration";
-import { throttle } from "@/src/utils/throttle";
-import toNumber from "@/src/utils/toNumber";
+import useDelayedValue from "@/hooks/useDelayedValue";
+import { useOutsideClick } from "@/hooks/useOutsideClick";
+import useThumbnails from "@/hooks/useThumbnails";
+import type { VideoType } from "@/models/Video";
+import formatDuration from "@/utils/formatDuration";
+import { throttle } from "@/utils/throttle";
+import toNumber from "@/utils/toNumber";
 import Image from "next/image";
 import {
     type ChangeEvent,

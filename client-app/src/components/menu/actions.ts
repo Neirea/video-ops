@@ -1,8 +1,8 @@
 "use server";
 import { revalidateTag } from "next/cache";
-import dbConnect from "@/src/lib/db";
-import { Token } from "@/src/models/Token";
-import { bucketClient } from "@/src/utils/storage";
+import dbConnect from "@/lib/db";
+import { Token } from "@/models/Token";
+import { bucketClient } from "@/utils/storage";
 import {
     CompleteMultipartUploadCommand,
     CreateMultipartUploadCommand,

@@ -1,4 +1,4 @@
-import type { VideoType } from "@/src/models/Video";
+import type { VideoType } from "@/models/Video";
 import HeadingTwo from "../HeadingTwo";
 import Link from "next/link";
 

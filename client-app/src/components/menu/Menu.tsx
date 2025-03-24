@@ -1,5 +1,5 @@
 "use client";
-import generateShortId from "@/src/utils/generateShortId";
+import generateShortId from "@/utils/generateShortId";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import Button from "../Button";

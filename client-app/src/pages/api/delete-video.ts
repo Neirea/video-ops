@@ -1,7 +1,7 @@
-import dbConnect from "@/src/lib/db";
-import { Token } from "@/src/models/Token";
-import { Video } from "@/src/models/Video";
-import { storage } from "@/src/utils/storage";
+import dbConnect from "@/lib/db";
+import { Token } from "@/models/Token";
+import { Video } from "@/models/Video";
+import { storage } from "@/utils/storage";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(

@@ -1,7 +1,7 @@
-import VideoPlayer from "@/src/components/video-player/VideoPlayer";
-import dbConnect from "@/src/lib/db";
-import { Video } from "@/src/models/Video";
-import getImageUrl from "@/src/utils/getImageUrl";
+import VideoPlayer from "@/components/video-player/VideoPlayer";
+import dbConnect from "@/lib/db";
+import { Video } from "@/models/Video";
+import getImageUrl from "@/utils/getImageUrl";
 
 const EmbedVideo = async (props: { params: Promise<{ id: string }> }) => {
     const params = await props.params;

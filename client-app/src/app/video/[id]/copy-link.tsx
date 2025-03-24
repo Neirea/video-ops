@@ -1,5 +1,5 @@
 "use client";
-import getIframeLink from "@/src/utils/getIframeLink";
+import getIframeLink from "@/utils/getIframeLink";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 

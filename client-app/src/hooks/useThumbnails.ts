@@ -1,5 +1,5 @@
-import deleteImages from "@/src/utils/deleteImages";
-import deriveImages from "@/src/utils/deriveImages";
+import deleteImages from "@/utils/deleteImages";
+import deriveImages from "@/utils/deriveImages";
 import { useEffect, useRef, useState } from "react";
 
 const useThumbnails = (imageUrl: string) => {

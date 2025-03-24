@@ -1,4 +1,4 @@
-interface ListProps extends React.ComponentPropsWithoutRef<"li"> {}
+type ListProps = React.ComponentPropsWithoutRef<"li">;
 
 const ListItem = ({ children, ...attributes }: ListProps) => {
     return (

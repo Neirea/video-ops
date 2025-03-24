@@ -1,7 +1,14 @@
+type PartType = {
+    signedUrl: string;
+    PartNumber: number;
+};
+
+type ResultType = { ETag: string | undefined; PartNumber: number };
+
 export async function trackUpload(
     chunksArray: (string | ArrayBuffer)[],
     fileSize: number,
-    parts: any[],
+    parts: PartType[],
     handleStatus: (v: string) => void
 ) {
     const reqProgress: {
@@ -9,7 +16,7 @@ export async function trackUpload(
         total: number;
         items: number[];
     } = { total: fileSize, current: 0, items: [] };
-    const partRequests: any[] = [];
+    const partRequests: Promise<ResultType>[] = [];
     for (let i = 0; i < chunksArray.length; i++) {
         reqProgress.items[i] = 0;
         partRequests.push(
@@ -74,7 +81,7 @@ export function trackedRequest({
     handleStatus,
 }: {
     url: string;
-    body: any;
+    body: string | ArrayBuffer;
     idx: number;
     reqProgress: {
         current: number;
@@ -82,7 +89,7 @@ export function trackedRequest({
         items: number[];
     };
     handleStatus: (v: string) => void;
-}) {
+}): Promise<ResultType> {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (e) => {
@@ -101,7 +108,7 @@ export function trackedRequest({
         xhr.onload = function () {
             if (xhr.status === 200) {
                 const ETag = xhr.getResponseHeader("ETag");
-                resolve({ ETag, PartNumber: idx + 1 });
+                resolve({ ETag: ETag || undefined, PartNumber: idx + 1 });
             }
         };
         xhr.onerror = function (error) {

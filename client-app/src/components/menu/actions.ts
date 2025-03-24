@@ -69,8 +69,8 @@ export async function completeUpload(
     UploadId: string | undefined,
     Key: string | undefined,
     results: {
-        ETag: any;
-        PartNumber: any;
+        ETag: string | undefined;
+        PartNumber: number;
     }[]
 ) {
     await dbConnect();

@@ -30,9 +30,9 @@ import ControlButton from "./ControlButton";
 //type support for different browsers
 declare global {
     interface Document {
-        webkitCurrentFullScreenElement: any;
+        webkitCurrentFullScreenElement: HTMLElement;
         webkitCancelFullScreen: () => void;
-        webkitFullscreenElement: any;
+        webkitFullscreenElement: HTMLElement;
         webkitExitFullscreen: () => void;
     }
     interface HTMLElement {
@@ -80,7 +80,11 @@ const VideoPlayer = ({
 
     const togglePlay = useCallback(async () => {
         if (!videoRef.current?.duration) return;
-        videoRef.current.paused ? await playVideo() : pauseVideo();
+        if (videoRef.current.paused) {
+            await playVideo();
+        } else {
+            pauseVideo();
+        }
     }, []);
     // update timeline
     const handleTimelineUpdate = useCallback(
@@ -219,8 +223,10 @@ const VideoPlayer = ({
     useEffect(() => {
         if (!isScrubbing) return;
         // event listeners to track timeline scrubbing
-        const handleEnd = (e: any) => {
-            toggleScrubbing(e);
+        const handleEnd = (e: unknown) => {
+            toggleScrubbing(
+                e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
+            );
         };
         const handleMove = throttle((e) => {
             handleTimelineUpdate(e, isScrubbing);
@@ -297,7 +303,11 @@ const VideoPlayer = ({
         const video = videoRef.current;
         if (!video?.duration) return;
         if (loading) return;
-        video.paused ? await playVideo() : pauseVideo();
+        if (video.paused) {
+            await playVideo();
+        } else {
+            pauseVideo();
+        }
     }
     // volume
     function handleSliderInput(e: ChangeEvent<HTMLInputElement>) {
@@ -389,7 +399,9 @@ const VideoPlayer = ({
                 await videoRef.current?.play();
                 setPaused(false);
             }
-        } catch (error) {}
+        } catch (error) {
+            console.error(error);
+        }
     }
     function pauseVideo() {
         if (!videoRef.current?.duration) return;

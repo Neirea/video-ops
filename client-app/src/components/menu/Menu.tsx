@@ -75,7 +75,7 @@ const Menu = () => {
         if (!ev.target?.result) return;
         const fileSize = (ev.target.result as ArrayBuffer).byteLength;
         if (fileSize > 2 * 10 ** 9) return;
-        let CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
+        const CHUNK_SIZE = 10 ** 7; //10Mb - min size for chunk
         const chunkCount = Math.ceil(fileSize / CHUNK_SIZE);
 
         //can't do more than 10000 chunks for upload
@@ -147,7 +147,8 @@ const Menu = () => {
             setStage(1);
             //check status with websockets
             trackUploadStatus(fileName);
-        } catch (error: any) {
+        } catch (error) {
+            console.error(error);
             setIsUploading(false);
             setStatus("Failed to upload");
         }

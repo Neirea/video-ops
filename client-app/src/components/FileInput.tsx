@@ -1,6 +1,6 @@
 import { useId, type ButtonHTMLAttributes, type ChangeEvent } from "react";
 
-type FileInputProps = ButtonHTMLAttributes<{}> & {
+type FileInputProps = ButtonHTMLAttributes<object> & {
     handleInput: (e: ChangeEvent<HTMLInputElement>) => void;
 };
 

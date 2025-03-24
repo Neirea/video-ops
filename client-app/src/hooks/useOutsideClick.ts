@@ -2,7 +2,7 @@ import { type RefObject, useEffect } from "react";
 
 /* Hook that sets state to false on click outside of the passed ref */
 export const useOutsideClick = (
-    refs: Array<MutableRefObject<any>>,
+    refs: Array<RefObject<HTMLElement | null>>,
     handleClose: () => void
 ) => {
     useEffect(() => {
@@ -14,7 +14,7 @@ export const useOutsideClick = (
                     refs.every(
                         (ref) =>
                             ref.current != null &&
-                            !ref.current.contains(e.target)
+                            !ref.current.contains(e.target as Node)
                     )
                 ) {
                     handleClose();

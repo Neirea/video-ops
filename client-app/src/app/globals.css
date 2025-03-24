@@ -14,12 +14,22 @@ body {
         "Helvetica Neue", sans-serif;
 }
 
+@layer base {
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+}
+
 @media (max-width: 560px) {
     * {
         font-size: 2.85vw;
     }
 }
 
+input {
+    background-color: white;
+}
 ul,
 li {
     list-style: none;

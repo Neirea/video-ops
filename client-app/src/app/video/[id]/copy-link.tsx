@@ -67,7 +67,7 @@ const CopyLink = ({ url }: { url: string }) => {
                         />
                     </svg>
                 ) : (
-                    <div className="h-6 w-6 before:absolute before:content-['Copied'] before:bg-stone-700 before:-top-6 before:right-0 before:z-50 before:px-1 before:py-0 before:rounded">
+                    <div className="h-6 w-6 before:absolute before:content-['Copied'] before:bg-stone-700 before:-top-6 before:right-0 before:z-50 before:px-1 before:py-0 before:rounded-sm">
                         ✔
                     </div>
                 )}

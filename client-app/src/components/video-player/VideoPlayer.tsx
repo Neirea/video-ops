@@ -459,7 +459,7 @@ const VideoPlayer = ({
         >
             {type === "embed" && (
                 <div
-                    className={`absolute left-0 top-0 right-0 text-white z-50 opacity-0 transition-opacity before:content-[''] before:absolute before:top-0 before:w-full before:-z-10 before:pointer-events-none before:bg-gradient-to-b before:from-black/75 before:to-transparent before:aspect-[3/1] group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                    className={`absolute left-0 top-0 right-0 text-white z-50 opacity-0 transition-opacity before:content-[''] before:absolute before:top-0 before:w-full before:-z-10 before:pointer-events-none before:bg-linear-to-b before:from-black/75 before:to-transparent before:aspect-3/1 group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
                         paused ? "opacity-100" : ""
                     }`}
                 >
@@ -506,7 +506,7 @@ const VideoPlayer = ({
             )}
             {/* video controls container */}
             <div
-                className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-[6/1] before:bg-gradient-to-t from-black/75 to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-6/1 before:bg-linear-to-t before:from-black/75 before:to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
                     paused || isTouchDevice() ? "opacity-100" : ""
                 }`}
             >
@@ -522,7 +522,7 @@ const VideoPlayer = ({
                     <div
                         className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
                             isScrubbing ? "before:block" : "before:hidden"
-                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-500 after:z-[1]`}
+                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-500 after:z-1`}
                     >
                         {/* preview image */}
                         {thumbnails.length > 0 && (
@@ -540,7 +540,7 @@ const VideoPlayer = ({
 
                         {/* thumb */}
                         <div
-                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-violet-500 rounded-full transition-transform aspect-[1/1] z-[2]`}
+                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-violet-500 rounded-full transition-transform aspect-1/1 z-2`}
                         ></div>
                         {/* buffered timeline */}
                         <div
@@ -580,7 +580,7 @@ const VideoPlayer = ({
                             max="1"
                             step="any"
                             title="Volume slider"
-                            className={`volume-slider  h-[0.3rem] origin-left  transition-all appearance-none cursor-pointer outline-none rounded-2xl bg-gradient-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100 ${
+                            className={`volume-slider  h-[0.3rem] origin-left  transition-all appearance-none cursor-pointer outline-hidden rounded-2xl bg-linear-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100 ${
                                 isTouchDevice()
                                     ? "w-24 scale-x-100"
                                     : "w-[1px] scale-x-0"
@@ -589,7 +589,7 @@ const VideoPlayer = ({
                         ></input>
                     </div>
                     {/* current time / total time */}
-                    <div className="flex items-center gap-1 flex-grow">
+                    <div className="flex items-center gap-1 grow">
                         <div>{time}</div>/
                         <div>
                             {videoRef.current?.duration

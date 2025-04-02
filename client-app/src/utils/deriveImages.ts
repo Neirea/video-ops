@@ -34,7 +34,7 @@ export default function deriveImages(source: string): Promise<string[]> {
                     x,
                     y,
                     thumbnailWidth,
-                    thumbnailHeight
+                    thumbnailHeight,
                 );
                 tmpContext!.putImageData(thumbnail, 0, 0);
                 const url = await getCanvasBlobUrl(tmpCanvas);

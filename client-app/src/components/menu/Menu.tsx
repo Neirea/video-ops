@@ -120,13 +120,13 @@ const Menu = () => {
                 token,
                 UploadId,
                 Key,
-                chunkCount
+                chunkCount,
             );
             //split file into chunks
             const chunksArray = splitBuffer(
                 ev.target.result,
                 chunkCount,
-                CHUNK_SIZE
+                CHUNK_SIZE,
             );
             setStatus("0%");
             //track each of the upload part
@@ -137,7 +137,7 @@ const Menu = () => {
                 chunksArray,
                 fileSize,
                 parts,
-                handleStatus
+                handleStatus,
             );
             //finish uploading
             setStatus("Please wait...");
@@ -199,7 +199,7 @@ const Menu = () => {
                     Choose File
                 </FileInput>
                 {/* selected file name */}
-                <div className="min-h-[1.5rem] max-w-[90%] text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
+                <div className="min-h-[1.5rem] max-w-[90%] cursor-default overflow-hidden text-ellipsis whitespace-nowrap">
                     {selectedFile?.name}
                 </div>
                 {isTranscoding ? (
@@ -214,7 +214,7 @@ const Menu = () => {
                 )}
             </form>
             {/* current status */}
-            <div className="min-h-[1.75rem] max-w-[90%] text-xl text-pink-300 text-ellipsis overflow-hidden whitespace-nowrap cursor-default">
+            <div className="min-h-[1.75rem] max-w-[90%] cursor-default overflow-hidden text-xl text-ellipsis whitespace-nowrap text-pink-300">
                 {status}
             </div>
         </>

@@ -2,7 +2,7 @@ import React from "react";
 
 const HeadingTwo = ({ children }: React.PropsWithChildren) => {
     return (
-        <h2 className="text-center text-violet-500 font-bold text-3xl my-4">
+        <h2 className="my-4 text-center text-3xl font-bold text-violet-500">
             {children}
         </h2>
     );

@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const throttle = <T extends (...args: any) => any>(
     callback: T,
-    delay = 1000
+    delay = 1000,
 ) => {
     let waiting = false; // Initially, we're not waiting
     return (...args: Parameters<T>) => {

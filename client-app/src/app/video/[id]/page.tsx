@@ -31,20 +31,20 @@ const Page = async (props: { params: Promise<{ id: string }> }) => {
     return (
         <>
             <main
-                className={`flex min-h-{90vh} flex-col lg:flex-row  ${inter.className}`}
+                className={`min-h-{90vh} flex flex-col lg:flex-row ${inter.className}`}
             >
-                <div className="flex w-full lg:w-96 flex-col items-center pt-8 gap-4 shrink-0 order-2 lg:order-1">
+                <div className="order-2 flex w-full shrink-0 flex-col items-center gap-4 pt-8 lg:order-1 lg:w-96">
                     <Menu />
                     <UploadedVideos videos={videoNames} />
                 </div>
-                <div className="grow p-4 pb-0 order-1 lg:order-2">
+                <div className="order-1 grow p-4 pb-0 lg:order-2">
                     <VideoPlayer
                         key={videoId}
                         type="normal"
                         video={currentVideo}
                         imageUrl={imageUrl || ""}
                     />
-                    <h3 className="text-2xl font-semibold my-2 mx-0 self-start"></h3>
+                    <h3 className="mx-0 my-2 self-start text-2xl font-semibold"></h3>
                     <CopyLink url={currentVideo.url} />
                 </div>
             </main>

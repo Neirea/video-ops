@@ -3,7 +3,7 @@ import { storage } from "@/utils/storage";
 
 export default async function handler(
     req: NextApiRequest,
-    res: NextApiResponse
+    res: NextApiResponse,
 ) {
     const queryVideo = req.query.v as string;
     const queryQuality = req.query.q as string;

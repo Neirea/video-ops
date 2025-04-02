@@ -2,7 +2,7 @@ type ListProps = React.ComponentPropsWithoutRef<"li">;
 
 const ListItem = ({ children, ...attributes }: ListProps) => {
     return (
-        <li className="py-1 px-2 cursor-pointer" {...attributes}>
+        <li className="cursor-pointer px-2 py-1" {...attributes}>
             {children}
         </li>
     );

@@ -15,7 +15,7 @@ async function getVideoData(videoUrl: string | string[] | undefined) {
     // get only JSON without _id
     const video = await Video.findOne(
         { url: videoUrl },
-        "-_id url name"
+        "-_id url name",
     ).lean();
 
     if (!video) {

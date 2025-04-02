@@ -90,7 +90,7 @@ const VideoPlayer = ({
     const handleTimelineUpdate = useCallback(
         (
             e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
-            scrubbing: boolean
+            scrubbing: boolean,
         ) => {
             const previewImg = previewImgRef.current;
             const thumbnailImg = thumbnailImgRef.current;
@@ -122,23 +122,23 @@ const VideoPlayer = ({
                 x + previewImg.offsetWidth / 2 > rect.right
                     ? rect.right - previewImg.offsetWidth / 2
                     : x - previewImg.offsetWidth / 2 < rect.left
-                    ? rect.left + previewImg.offsetWidth / 2
-                    : x;
+                      ? rect.left + previewImg.offsetWidth / 2
+                      : x;
             const previewPercent =
                 Math.min(Math.max(0, previewX - rect.x), rect.width) /
                 rect.width;
             timelineContainer.style.setProperty(
                 "--preview-position",
-                previewPercent.toString()
+                previewPercent.toString(),
             );
             if (scrubbing) {
                 timelineContainer.style.setProperty(
                     "--progress-position",
-                    percent.toString()
+                    percent.toString(),
                 );
             }
         },
-        [thumbnails]
+        [thumbnails],
     );
     // scrubbing via mouse and touch
     const toggleScrubbing = useCallback(
@@ -175,7 +175,7 @@ const VideoPlayer = ({
             }
             pauseVideo();
         },
-        [handleTimelineUpdate, loading, wasPaused]
+        [handleTimelineUpdate, loading, wasPaused],
     );
 
     useOutsideClick([qualityRef], () => {
@@ -225,7 +225,7 @@ const VideoPlayer = ({
         // event listeners to track timeline scrubbing
         const handleEnd = (e: unknown) => {
             toggleScrubbing(
-                e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>
+                e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
             );
         };
         const handleMove = throttle((e) => {
@@ -277,7 +277,7 @@ const VideoPlayer = ({
         setLoading(false);
         const percent =
             toNumber(
-                timelineContainer.style.getPropertyValue("--progress-position")
+                timelineContainer.style.getPropertyValue("--progress-position"),
             ) || 0;
         video.currentTime = percent * video.duration;
         if (wasPaused === false) await playVideo();
@@ -293,7 +293,7 @@ const VideoPlayer = ({
         const percent = video.currentTime / video.duration;
         timelineContainer.style.setProperty(
             "--progress-position",
-            percent.toString()
+            percent.toString(),
         );
         updateBufferRange();
     }
@@ -455,16 +455,16 @@ const VideoPlayer = ({
     return (
         <div
             id={"video-player"}
-            className="relative w-full flex bg-none group/video"
+            className="group/video relative flex w-full bg-none"
         >
             {type === "embed" && (
                 <div
-                    className={`absolute left-0 top-0 right-0 text-white z-50 opacity-0 transition-opacity before:content-[''] before:absolute before:top-0 before:w-full before:-z-10 before:pointer-events-none before:bg-linear-to-b before:from-black/75 before:to-transparent before:aspect-3/1 group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                    className={`absolute top-0 right-0 left-0 z-50 text-white opacity-0 transition-opacity group-focus-within/video:opacity-100 group-hover/video:opacity-100 before:pointer-events-none before:absolute before:top-0 before:-z-10 before:aspect-3/1 before:w-full before:bg-linear-to-b before:from-black/75 before:to-transparent before:content-[''] ${
                         paused ? "opacity-100" : ""
                     }`}
                 >
                     <a
-                        className="block mt-2 ml-4 text-xl text-white no-underline cursor-pointer opacity-[0.85] hover:opacity-100"
+                        className="mt-2 ml-4 block cursor-pointer text-xl text-white no-underline opacity-[0.85] hover:opacity-100"
                         href={`/video/${video.url}`}
                         target="_blank"
                     >
@@ -475,7 +475,7 @@ const VideoPlayer = ({
             <video
                 ref={videoRef}
                 src={`/api/video?v=${video.url}&q=${quality}`}
-                className="w-full aspect-video"
+                className="aspect-video w-full"
                 onLoadStart={handleLoadStart}
                 onLoadedData={handleLoadedData}
                 onTimeUpdate={handleTimeUpdate}
@@ -488,7 +488,7 @@ const VideoPlayer = ({
                 <div
                     className={`${
                         loading ? "block" : "hidden"
-                    }  animate-spin w-12 h-12 border-4 border-solid border-b-transparent rounded-full`}
+                    } h-12 w-12 animate-spin rounded-full border-4 border-solid border-b-transparent`}
                 ></div>
             </div>
             {/* thumbnail image */}
@@ -498,7 +498,7 @@ const VideoPlayer = ({
                     alt="thumbnail"
                     className={`${
                         delayedScrubbing ? "block" : "hidden"
-                    } absolute top-0 left-0 right-0 bottom-0 w-full h-full brightness-50`}
+                    } absolute top-0 right-0 bottom-0 left-0 h-full w-full brightness-50`}
                     src={thumbnails[0]}
                     width={"128"}
                     height={"72"}
@@ -506,23 +506,23 @@ const VideoPlayer = ({
             )}
             {/* video controls container */}
             <div
-                className={`absolute left-0 right-0 bottom-0 text-white z-50 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity before:content-[''] before:absolute before:w-full before:z-[-1] before:pointer-events-none before:bottom-0 before:aspect-6/1 before:bg-linear-to-t before:from-black/75 before:to-transparent group-hover/video:opacity-100 group-focus-within/video:opacity-100 ${
+                className={`absolute right-0 bottom-0 left-0 z-50 text-white opacity-0 transition-opacity group-focus-within/video:opacity-100 group-hover/video:opacity-100 before:pointer-events-none before:absolute before:bottom-0 before:z-[-1] before:aspect-6/1 before:w-full before:bg-linear-to-t before:from-black/75 before:to-transparent before:content-[''] focus-within:opacity-100 hover:opacity-100 ${
                     paused || isTouchDevice() ? "opacity-100" : ""
                 }`}
             >
                 {/* timeline container */}
                 <div
                     ref={timelineRef}
-                    className="group/timeline h-4 ms-2 me-2 cursor-pointer flex items-end"
+                    className="group/timeline ms-2 me-2 flex h-4 cursor-pointer items-end"
                     onMouseMove={handleMouseOverMove}
                     onMouseDown={toggleScrubbing}
                     onTouchStart={toggleScrubbing}
                 >
                     {/* timeline */}
                     <div
-                        className={`timeline group-hover/timeline:h-[35%] relative bg-stone-500/50 h-[3px] w-full before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:bg-neutral-400 group-hover/timeline:before:block ${
+                        className={`timeline relative h-[3px] w-full bg-stone-500/50 group-hover/timeline:h-[35%] before:absolute before:top-0 before:bottom-0 before:left-0 before:bg-neutral-400 before:content-[''] group-hover/timeline:before:block ${
                             isScrubbing ? "before:block" : "before:hidden"
-                        } after:content-[''] after:absolute after:left-0 after:top-0 after:bottom-0 after:bg-violet-500 after:z-1`}
+                        } after:absolute after:top-0 after:bottom-0 after:left-0 after:z-1 after:bg-violet-500 after:content-['']`}
                     >
                         {/* preview image */}
                         {thumbnails.length > 0 && (
@@ -531,7 +531,7 @@ const VideoPlayer = ({
                                 alt="preview"
                                 className={`preview-img group-hover/timeline:block ${
                                     delayedScrubbing ? "block" : "hidden"
-                                } absolute h-20 aspect-video top-[-1rem] -translate-x-1/2 -translate-y-full border-2 border-solid rounded border-white`}
+                                } absolute top-[-1rem] aspect-video h-20 -translate-x-1/2 -translate-y-full rounded border-2 border-solid border-white`}
                                 src={thumbnails[0]}
                                 width={"128"}
                                 height={"72"}
@@ -540,7 +540,7 @@ const VideoPlayer = ({
 
                         {/* thumb */}
                         <div
-                            className={`thumb-indicator group-hover/timeline:scale-100 absolute -translate-x-1/2 scale-0 h-[200%] -top-1/2 bg-violet-500 rounded-full transition-transform aspect-1/1 z-2`}
+                            className={`thumb-indicator absolute -top-1/2 z-2 aspect-1/1 h-[200%] -translate-x-1/2 scale-0 rounded-full bg-violet-500 transition-transform group-hover/timeline:scale-100`}
                         ></div>
                         {/* buffered timeline */}
                         <div
@@ -550,7 +550,7 @@ const VideoPlayer = ({
                     </div>
                 </div>
                 {/* controls */}
-                <div className="flex gap-2 p-1 items-center">
+                <div className="flex items-center gap-2 p-1">
                     {/* play/pause button */}
                     <ControlButton
                         onClick={handleVideoClick}
@@ -559,7 +559,7 @@ const VideoPlayer = ({
                         {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}
                     </ControlButton>
                     {/* volume icon */}
-                    <div className="flex items-center hover:flex group/vol">
+                    <div className="group/vol flex items-center hover:flex">
                         <ControlButton
                             onClick={handleMute}
                             title={"Mute/Unmute"}
@@ -580,7 +580,7 @@ const VideoPlayer = ({
                             max="1"
                             step="any"
                             title="Volume slider"
-                            className={`volume-slider  h-[0.3rem] origin-left  transition-all appearance-none cursor-pointer outline-hidden rounded-2xl bg-linear-to-r from-white to-stone-500/50 focus-within:w-24 focus-within:scale-x-100 group-hover/vol:w-24 group-hover/vol:scale-x-100 ${
+                            className={`volume-slider h-[0.3rem] origin-left cursor-pointer appearance-none rounded-2xl bg-linear-to-r from-white to-stone-500/50 outline-hidden transition-all group-hover/vol:w-24 group-hover/vol:scale-x-100 focus-within:w-24 focus-within:scale-x-100 ${
                                 isTouchDevice()
                                     ? "w-24 scale-x-100"
                                     : "w-[1px] scale-x-0"
@@ -589,7 +589,7 @@ const VideoPlayer = ({
                         ></input>
                     </div>
                     {/* current time / total time */}
-                    <div className="flex items-center gap-1 grow">
+                    <div className="flex grow items-center gap-1">
                         <div>{time}</div>/
                         <div>
                             {videoRef.current?.duration
@@ -617,7 +617,7 @@ const VideoPlayer = ({
                         <ul
                             className={`${
                                 popup ? "block" : "hidden"
-                            } absolute text-center -top-28 bg-stone-900/50 leading-6`}
+                            } absolute -top-28 bg-stone-900/50 text-center leading-6`}
                         >
                             {qualityList.map((i, idx) => (
                                 <ListItem

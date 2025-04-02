@@ -28,7 +28,7 @@ React.PropsWithChildren<FileInputProps>) => {
             ></input>
             <label
                 htmlFor={id}
-                className={`block leading-normal border-solid border-2 rounded-sm px-2 py-1 text-xl cursor-pointer ${activeStyles}`}
+                className={`block cursor-pointer rounded-sm border-2 border-solid px-2 py-1 text-xl leading-normal ${activeStyles}`}
             >
                 {children}
             </label>

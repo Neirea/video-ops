@@ -37,17 +37,17 @@ const CopyLink = ({ url }: { url: string }) => {
     if (!origin) return null;
 
     return (
-        <div className="flex align-center w-full gap-2">
+        <div className="align-center flex w-full gap-2">
             <label className="shrink-0">Embedded video:</label>
             <div
-                className="text-base text-white bg-none border-b-2 border-solid border-stone-500/50 resize-none"
+                className="resize-none border-b-2 border-solid border-stone-500/50 bg-none text-base text-white"
                 onClick={handleLinkSelect}
                 onBlur={handleLinkBlur}
             >
                 {getIframeLink(origin, url)}
             </div>
             <button
-                className="text-white relative"
+                className="relative text-white"
                 onClick={handleCopy}
                 title="Copy embed link"
             >
@@ -57,7 +57,7 @@ const CopyLink = ({ url }: { url: string }) => {
                         width="50.788"
                         height="50.723"
                         viewBox="0 0 50.788 50.723"
-                        className="invert h-6 w-6"
+                        className="h-6 w-6 invert"
                     >
                         <path
                             id="Copy-Icon-SVG-098567"
@@ -67,7 +67,7 @@ const CopyLink = ({ url }: { url: string }) => {
                         />
                     </svg>
                 ) : (
-                    <div className="h-6 w-6 before:absolute before:content-['Copied'] before:bg-stone-700 before:-top-6 before:right-0 before:z-50 before:px-1 before:py-0 before:rounded-sm">
+                    <div className="h-6 w-6 before:absolute before:-top-6 before:right-0 before:z-50 before:rounded-sm before:bg-stone-700 before:px-1 before:py-0 before:content-['Copied']">
                         ✔
                     </div>
                 )}

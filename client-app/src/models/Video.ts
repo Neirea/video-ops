@@ -9,7 +9,7 @@ type VideoSchemaType = {
 
 export type VideoFullType = VideoSchemaType & { _id: Types.ObjectId };
 
-export type VideoType = Pick<VideoFullType,"name" | "url">;
+export type VideoType = Pick<VideoFullType, "name" | "url">;
 
 const VideoSchema = new Schema(
     {
@@ -24,9 +24,10 @@ const VideoSchema = new Schema(
             required: true,
         },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
-const Video:Model<VideoSchemaType> = models.Video || model("Video", VideoSchema);
+const Video: Model<VideoSchemaType> =
+    models.Video || model("Video", VideoSchema);
 
 export { Video };

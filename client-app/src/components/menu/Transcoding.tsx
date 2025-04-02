@@ -35,7 +35,7 @@ const Transcoding = ({
                 </StatusListItem>
             </ul>
             {stage === 2 && (
-                <ul className="flex flex-col gap-2 w-[70%]">
+                <ul className="flex w-[70%] flex-col gap-2">
                     {Object.entries(progress).map(([key, value]) => {
                         return (
                             <VideoStatusItem key={`vsi-${key}`} percent={value}>
@@ -56,9 +56,9 @@ const VideoStatusItem = ({
     return (
         <li>
             <div>{children}</div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div className="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
                 <div
-                    className="bg-violet-500 h-2.5 rounded-full"
+                    className="h-2.5 rounded-full bg-violet-500"
                     style={{ width: `${attributes.percent}%` }}
                 ></div>
             </div>
@@ -72,7 +72,7 @@ const StatusListItem = ({
 }: React.PropsWithChildren<{ line?: boolean }>) => {
     return (
         <li
-            className={`flex relative flex-col items-center gap-4 w-12`}
+            className={`relative flex w-12 flex-col items-center gap-4`}
             {...attributes}
         >
             {children}
@@ -93,8 +93,8 @@ const StatusCircle = ({
         status === "COMPLETE"
             ? "bg-violet-500"
             : status === "ACTIVE"
-            ? "bg-violet-300"
-            : "bg-transparent";
+              ? "bg-violet-300"
+              : "bg-transparent";
     const borderColor =
         status === "COMPLETE" ? "border-violet-500" : "border-stone-500";
 
@@ -107,7 +107,7 @@ const StatusCircle = ({
 
     return (
         <span
-            className={`flex justify-center items-center border-solid border-2 rounded-full h-8 w-8 z-1 ${bgColor} ${borderColor} ${lineCSS}`}
+            className={`z-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-solid ${bgColor} ${borderColor} ${lineCSS}`}
         >
             {status === "COMPLETE" ? "✔" : "?"}
         </span>

@@ -2,7 +2,7 @@ import React from "react";
 
 const HeadingOne = ({ children }: React.PropsWithChildren) => {
     return (
-        <h1 className="text-center text-violet-500 text-4xl font-bold m-0 whitespace-pre-wrap">
+        <h1 className="m-0 text-center text-4xl font-bold whitespace-pre-wrap text-violet-500">
             {children}
         </h1>
     );

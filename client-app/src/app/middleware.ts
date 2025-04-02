@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
     if (!isIframe) {
         return new NextResponse(
             "Sorry! Can only use this route as an iframe src",
-            { status: 400, headers: { "content-type": "application/json" } }
+            { status: 400, headers: { "content-type": "application/json" } },
         );
     }
 }

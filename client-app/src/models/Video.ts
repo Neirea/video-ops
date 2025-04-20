@@ -7,7 +7,9 @@ type VideoSchemaType = {
     updatedAt: Date;
 };
 
-export type VideoFullType = VideoSchemaType & { _id: Types.ObjectId };
+export interface VideoFullType extends VideoSchemaType {
+    _id: Types.ObjectId;
+}
 
 export type VideoType = Pick<VideoFullType, "name" | "url">;
 

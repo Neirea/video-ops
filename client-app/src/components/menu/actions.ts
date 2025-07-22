@@ -1,5 +1,4 @@
 "use server";
-import { revalidateTag } from "next/cache";
 import dbConnect from "@/lib/db";
 import { Token } from "@/models/Token";
 import { bucketClient } from "@/utils/storage";
@@ -34,7 +33,7 @@ export async function getUploadUrls(
     token: string,
     UploadId: string | undefined,
     Key: string | undefined,
-    chunkCount: number
+    chunkCount: number,
 ) {
     await dbConnect();
     const tokens = await Token.find({ charges: { $gte: 1 } });
@@ -71,7 +70,7 @@ export async function completeUpload(
     results: {
         ETag: string | undefined;
         PartNumber: number;
-    }[]
+    }[],
 ) {
     await dbConnect();
     const tokens = await Token.find({ charges: { $gte: 1 } });
@@ -91,10 +90,6 @@ export async function completeUpload(
     // decrement until 0
     await Token.updateOne(
         { token: token, charges: { $gte: 1 } },
-        { $inc: { charges: -1 } }
+        { $inc: { charges: -1 } },
     );
-}
-
-export default async function action() {
-    revalidateTag("videos");
 }

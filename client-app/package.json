@@ -9,25 +9,25 @@
         "lint": "next lint"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.774.0",
-        "@aws-sdk/s3-request-presigner": "^3.774.0",
-        "@google-cloud/storage": "^7.15.2",
-        "mongoose": "^8.13.0",
-        "next": "15.2.4",
-        "react": "19.0.0",
-        "react-dom": "19.0.0"
+        "@aws-sdk/client-s3": "^3.850.0",
+        "@aws-sdk/s3-request-presigner": "^3.850.0",
+        "@google-cloud/storage": "^7.16.0",
+        "mongoose": "^8.16.4",
+        "next": "15.4.2",
+        "react": "19.1.0",
+        "react-dom": "19.1.0"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3.3.1",
-        "@tailwindcss/postcss": "^4.0.15",
-        "@types/node": "^22",
-        "@types/react": "19.0.12",
-        "@types/react-dom": "19.0.4",
-        "eslint": "^9.23.0",
-        "eslint-config-next": "15.2.4",
-        "prettier": "^3.5.3",
-        "prettier-plugin-tailwindcss": "^0.6.11",
-        "tailwindcss": "^4.0.15",
-        "typescript": "^5.8.2"
+        "@tailwindcss/postcss": "^4.1.11",
+        "@types/node": "^24",
+        "@types/react": "19.1.8",
+        "@types/react-dom": "19.1.6",
+        "eslint": "^9.31.0",
+        "eslint-config-next": "15.4.2",
+        "prettier": "^3.6.2",
+        "prettier-plugin-tailwindcss": "^0.6.14",
+        "tailwindcss": "^4.1.11",
+        "typescript": "^5.8.3"
     }
 }

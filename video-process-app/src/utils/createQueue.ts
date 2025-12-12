@@ -6,7 +6,7 @@ type Job<T> = {
 
 class AsyncQueue<T extends Object> {
     private queueName: string;
-    private redisClient: RedisClientType<any, any, any>;
+    private redisClient: RedisClientType<any, any, any, any>;
     private maxWorkers: number;
     private activeWorkers: number;
     private processFn: (job: Job<T>) => any;
@@ -14,7 +14,7 @@ class AsyncQueue<T extends Object> {
     private maxRetries: number;
 
     constructor(
-        redisClient: RedisClientType<any, any, any>,
+        redisClient: RedisClientType<any, any, any, any>,
         queueName = "myQueue",
         options: {
             maxWorkers?: number;

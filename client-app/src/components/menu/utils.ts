@@ -9,7 +9,7 @@ export async function trackUpload(
     chunksArray: (string | ArrayBuffer)[],
     fileSize: number,
     parts: PartType[],
-    handleStatus: (v: string) => void
+    handleStatus: (v: string) => void,
 ) {
     const reqProgress: {
         current: number;
@@ -26,7 +26,7 @@ export async function trackUpload(
                 idx: i,
                 reqProgress,
                 handleStatus,
-            })
+            }),
         );
     }
     const partResults = await Promise.all(partRequests);
@@ -42,14 +42,14 @@ export async function trackUpload(
 export function splitBuffer(
     buffer: string | ArrayBuffer,
     chunkCount: number,
-    chunkSize: number
+    chunkSize: number,
 ) {
     const chunksArray = [];
 
     for (let chunkId = 0; chunkId < chunkCount; chunkId++) {
         const chunk = buffer.slice(
             chunkId * chunkSize,
-            chunkId * chunkSize + chunkSize
+            chunkId * chunkSize + chunkSize,
         );
         chunksArray.push(chunk);
     }
@@ -67,7 +67,7 @@ export function createWSConnection(fileName: string) {
             JSON.stringify({
                 type: "upload",
                 fileName: fileName,
-            })
+            }),
         );
     });
     return socket;
@@ -100,8 +100,8 @@ export function trackedRequest({
 
             handleStatus(
                 `${Math.floor(
-                    (reqProgress.current / reqProgress.total) * 100
-                )}%`
+                    (reqProgress.current / reqProgress.total) * 100,
+                )}%`,
             );
         });
         xhr.open("PUT", url);
@@ -112,7 +112,8 @@ export function trackedRequest({
             }
         };
         xhr.onerror = function (error) {
-            reject(error);
+            console.log(error);
+            reject(new Error("Network error during upload"));
         };
         xhr.onabort = function () {
             reject(new Error("Upload cancelled by user"));

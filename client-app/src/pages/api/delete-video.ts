@@ -4,8 +4,12 @@ import { Video } from "@/models/Video";
 import { storage } from "@/utils/storage";
 import type { NextApiRequest, NextApiResponse } from "next";
 
+type TypedNextApiRequest<T> = Omit<NextApiRequest, "body"> & {
+    body: T;
+};
+
 export default async function handler(
-    req: NextApiRequest,
+    req: TypedNextApiRequest<{ url: string }>,
     res: NextApiResponse,
 ) {
     if (req.method !== "POST") {

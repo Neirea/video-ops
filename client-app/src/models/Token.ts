@@ -15,6 +15,6 @@ const TokenSchema = new Schema({
     },
 });
 
-const Token: Model<TokenType> = models.Key || model("Key", TokenSchema);
+const Token = (models.Token as Model<TokenType>) || model("Token", TokenSchema);
 
 export { Token };

@@ -196,8 +196,9 @@ const VideoPlayer = ({
             switch (e.key.toLowerCase()) {
                 case " ":
                     if (tagName === "button") return;
+                    break;
                 case "k":
-                    togglePlay();
+                    void togglePlay();
                     break;
                 case "m":
                     toggleMute();
@@ -224,12 +225,15 @@ const VideoPlayer = ({
         if (!isScrubbing) return;
         // event listeners to track timeline scrubbing
         const handleEnd = (e: unknown) => {
-            toggleScrubbing(
+            void toggleScrubbing(
                 e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
             );
         };
         const handleMove = throttle((e) => {
-            handleTimelineUpdate(e, isScrubbing);
+            handleTimelineUpdate(
+                e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
+                isScrubbing,
+            );
         }, throttleDelay);
 
         const controller = new AbortController();
@@ -252,7 +256,11 @@ const VideoPlayer = ({
     }, [isScrubbing, handleTimelineUpdate, toggleScrubbing]);
 
     const handleMouseOverMove = throttle((e) => {
-        if (!isScrubbing) handleTimelineUpdate(e, isScrubbing);
+        if (!isScrubbing)
+            handleTimelineUpdate(
+                e as MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>,
+                isScrubbing,
+            );
     }, throttleDelay);
 
     // video load start
@@ -349,7 +357,7 @@ const VideoPlayer = ({
         setIsFullScreen(false);
         // Exit full screen
         if (document.fullscreenElement == videoPlayer) {
-            document.exitFullscreen();
+            void document.exitFullscreen();
             return;
         }
         /* IOS */
@@ -364,7 +372,7 @@ const VideoPlayer = ({
         // Enter Full screen
         setIsFullScreen(true);
         if (videoPlayer.requestFullscreen) {
-            videoPlayer.requestFullscreen();
+            void videoPlayer.requestFullscreen();
         } else if (videoPlayer.webkitRequestFullscreen) {
             /* IOS */
             videoPlayer.webkitRequestFullscreen();
@@ -477,10 +485,10 @@ const VideoPlayer = ({
                 src={`/api/video?v=${video.url}&q=${quality}`}
                 className="aspect-video w-full"
                 onLoadStart={handleLoadStart}
-                onLoadedData={handleLoadedData}
+                onLoadedData={void handleLoadedData}
                 onTimeUpdate={handleTimeUpdate}
                 onPlaying={() => setLoading(false)}
-                onClick={handleVideoClick}
+                onClick={void handleVideoClick}
                 onVolumeChange={handleVolumeChange}
             ></video>
             {/* loading indicator */}
@@ -515,8 +523,8 @@ const VideoPlayer = ({
                     ref={timelineRef}
                     className="group/timeline ms-2 me-2 flex h-4 cursor-pointer items-end"
                     onMouseMove={handleMouseOverMove}
-                    onMouseDown={toggleScrubbing}
-                    onTouchStart={toggleScrubbing}
+                    onMouseDown={void toggleScrubbing}
+                    onTouchStart={void toggleScrubbing}
                 >
                     {/* timeline */}
                     <div
@@ -553,7 +561,7 @@ const VideoPlayer = ({
                 <div className="flex items-center gap-2 p-1">
                     {/* play/pause button */}
                     <ControlButton
-                        onClick={handleVideoClick}
+                        onClick={void handleVideoClick}
                         title={paused ? "Play" : "Pause"}
                     >
                         {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}

@@ -30,6 +30,6 @@ const VideoSchema = new Schema(
 );
 
 const Video: Model<VideoSchemaType> =
-    models.Video || model("Video", VideoSchema);
+    (models.Video as Model<VideoSchemaType>) || model("Video", VideoSchema);
 
 export { Video };

@@ -45,8 +45,11 @@ const Menu = () => {
         //create websocket connection
         const socket = createWSConnection(fileName);
         // picture of uploading
-        socket.addEventListener("message", (event) => {
-            const { status, msg } = JSON.parse(event.data);
+        socket.addEventListener("message", (event: MessageEvent<string>) => {
+            const { status, msg } = JSON.parse(event.data) as {
+                status: string;
+                msg: string;
+            };
             if (status === "checked") {
                 setStage(2);
                 setStatus(msg);

@@ -29,7 +29,7 @@ const CopyLink = ({ url }: { url: string }) => {
 
     function handleCopy() {
         // if (!currentVideo) return;
-        navigator.clipboard.writeText(getIframeLink(origin, url));
+        void navigator.clipboard.writeText(getIframeLink(origin, url));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }

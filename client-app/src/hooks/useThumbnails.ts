@@ -12,7 +12,7 @@ const useThumbnails = (imageUrl: string) => {
             thumbnailsRef.current = fetchedThumbnails;
             setThumbnails(fetchedThumbnails);
         };
-        fetchThumbnails();
+        void fetchThumbnails();
 
         return () => {
             deleteImages(thumbnailsRef.current);

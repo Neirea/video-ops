@@ -520,7 +520,7 @@ const VideoPlayer = ({
                 >
                     {/* timeline */}
                     <div
-                        className={`timeline relative h-[3px] w-full bg-stone-500/50 group-hover/timeline:h-[35%] before:absolute before:top-0 before:bottom-0 before:left-0 before:bg-neutral-400 before:content-[''] group-hover/timeline:before:block ${
+                        className={`timeline relative h-0.75 w-full bg-stone-500/50 group-hover/timeline:h-[35%] before:absolute before:top-0 before:bottom-0 before:left-0 before:bg-neutral-400 before:content-[''] group-hover/timeline:before:block ${
                             isScrubbing ? "before:block" : "before:hidden"
                         } after:absolute after:top-0 after:bottom-0 after:left-0 after:z-1 after:bg-violet-500 after:content-['']`}
                     >
@@ -531,7 +531,7 @@ const VideoPlayer = ({
                                 alt="preview"
                                 className={`preview-img group-hover/timeline:block ${
                                     delayedScrubbing ? "block" : "hidden"
-                                } absolute top-[-1rem] aspect-video h-20 -translate-x-1/2 -translate-y-full rounded border-2 border-solid border-white`}
+                                } absolute -top-4 aspect-video h-20 -translate-x-1/2 -translate-y-full rounded border-2 border-solid border-white`}
                                 src={thumbnails[0]}
                                 width={"128"}
                                 height={"72"}
@@ -540,7 +540,7 @@ const VideoPlayer = ({
 
                         {/* thumb */}
                         <div
-                            className={`thumb-indicator absolute -top-1/2 z-2 aspect-1/1 h-[200%] -translate-x-1/2 scale-0 rounded-full bg-violet-500 transition-transform group-hover/timeline:scale-100`}
+                            className={`thumb-indicator absolute -top-1/2 z-2 aspect-square h-[200%] -translate-x-1/2 scale-0 rounded-full bg-violet-500 transition-transform group-hover/timeline:scale-100`}
                         ></div>
                         {/* buffered timeline */}
                         <div
@@ -583,7 +583,7 @@ const VideoPlayer = ({
                             className={`volume-slider h-[0.3rem] origin-left cursor-pointer appearance-none rounded-2xl bg-linear-to-r from-white to-stone-500/50 outline-hidden transition-all group-hover/vol:w-24 group-hover/vol:scale-x-100 focus-within:w-24 focus-within:scale-x-100 ${
                                 isTouchDevice()
                                     ? "w-24 scale-x-100"
-                                    : "w-[1px] scale-x-0"
+                                    : "w-px scale-x-0"
                             }`}
                             onChange={handleSliderInput}
                         ></input>
@@ -606,7 +606,7 @@ const VideoPlayer = ({
                         {speed}x
                     </ControlButton>
                     {/* list of video qualities */}
-                    <div className="relative min-w-[4rem]" ref={qualityRef}>
+                    <div className="relative min-w-16" ref={qualityRef}>
                         <ControlButton
                             className="w-full"
                             title="Video resolution"

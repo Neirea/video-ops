@@ -199,7 +199,7 @@ const Menu = () => {
                     Choose File
                 </FileInput>
                 {/* selected file name */}
-                <div className="min-h-[1.5rem] max-w-[90%] cursor-default overflow-hidden text-ellipsis whitespace-nowrap">
+                <div className="min-h-6 max-w-[90%] cursor-default overflow-hidden text-ellipsis whitespace-nowrap">
                     {selectedFile?.name}
                 </div>
                 {isTranscoding ? (
@@ -214,7 +214,7 @@ const Menu = () => {
                 )}
             </form>
             {/* current status */}
-            <div className="min-h-[1.75rem] max-w-[90%] cursor-default overflow-hidden text-xl text-ellipsis whitespace-nowrap text-pink-300">
+            <div className="min-h-7 max-w-[90%] cursor-default overflow-hidden text-xl text-ellipsis whitespace-nowrap text-pink-300">
                 {status}
             </div>
         </>

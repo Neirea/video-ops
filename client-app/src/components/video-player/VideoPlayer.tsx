@@ -196,6 +196,7 @@ const VideoPlayer = ({
             switch (e.key.toLowerCase()) {
                 case " ":
                     if (tagName === "button") return;
+                    void togglePlay();
                     break;
                 case "k":
                     void togglePlay();
@@ -485,10 +486,10 @@ const VideoPlayer = ({
                 src={`/api/video?v=${video.url}&q=${quality}`}
                 className="aspect-video w-full"
                 onLoadStart={handleLoadStart}
-                onLoadedData={void handleLoadedData}
+                onLoadedData={() => void handleLoadedData()}
                 onTimeUpdate={handleTimeUpdate}
                 onPlaying={() => setLoading(false)}
-                onClick={void handleVideoClick}
+                onClick={() => void handleVideoClick()}
                 onVolumeChange={handleVolumeChange}
             ></video>
             {/* loading indicator */}
@@ -523,8 +524,8 @@ const VideoPlayer = ({
                     ref={timelineRef}
                     className="group/timeline ms-2 me-2 flex h-4 cursor-pointer items-end"
                     onMouseMove={handleMouseOverMove}
-                    onMouseDown={void toggleScrubbing}
-                    onTouchStart={void toggleScrubbing}
+                    onMouseDown={(e) => void toggleScrubbing(e)}
+                    onTouchStart={(e) => void toggleScrubbing(e)}
                 >
                     {/* timeline */}
                     <div
@@ -561,7 +562,7 @@ const VideoPlayer = ({
                 <div className="flex items-center gap-2 p-1">
                     {/* play/pause button */}
                     <ControlButton
-                        onClick={void handleVideoClick}
+                        onClick={() => void handleVideoClick()}
                         title={paused ? "Play" : "Pause"}
                     >
                         {!paused ? <VideoPausedIcon /> : <VideoPlayIcon />}

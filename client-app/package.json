@@ -2,6 +2,7 @@
     "name": "client-app",
     "version": "0.1.0",
     "private": true,
+    "type":"module",
     "scripts": {
         "dev": "next dev",
         "build": "next build",
@@ -9,27 +10,28 @@
         "lint": "eslint \"src/**/*.{ts,tsx}\" --fix"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.990.0",
-        "@aws-sdk/s3-request-presigner": "^3.990.0",
+        "@aws-sdk/client-s3": "^3.996.0",
+        "@aws-sdk/s3-request-presigner": "^3.996.0",
         "@google-cloud/storage": "^7.19.0",
-        "mongoose": "^9.2.1",
+        "mongoose": "^9.2.2",
         "next": "^16.1.6",
         "react": "19.2.4",
         "react-dom": "19.2.4"
     },
     "devDependencies": {
-        "@eslint/eslintrc": "^3.3.3",
-        "@tailwindcss/postcss": "^4.1.18",
+        "@eslint/js": "^10.0.1",
+        "@tailwindcss/postcss": "^4.2.1",
         "@types/node": "^25",
         "@types/react": "19.2.14",
         "@types/react-dom": "19.2.3",
-        "eslint": "^9.39.2",
-        "eslint-config-next": "16.0.10",
+        "eslint": "^10.0.2",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-prettier": "^5.5.5",
+        "globals": "^17.3.0",
         "prettier": "^3.8.1",
         "prettier-plugin-tailwindcss": "^0.7.2",
-        "tailwindcss": "^4.1.18",
-        "typescript": "^5.9.3"
+        "tailwindcss": "^4.2.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.56.1"
     }
 }

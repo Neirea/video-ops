@@ -10,8 +10,8 @@
         "lint": "eslint \"src/**/*.{ts,tsx}\" --fix"
     },
     "dependencies": {
-        "@aws-sdk/client-s3": "^3.996.0",
-        "@aws-sdk/s3-request-presigner": "^3.996.0",
+        "@aws-sdk/client-s3": "^3.998.0",
+        "@aws-sdk/s3-request-presigner": "^3.998.0",
         "@google-cloud/storage": "^7.19.0",
         "mongoose": "^9.2.2",
         "next": "^16.1.6",

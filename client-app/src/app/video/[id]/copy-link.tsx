@@ -40,7 +40,7 @@ const CopyLink = ({ url }: { url: string }) => {
         <div className="align-center flex w-full gap-2">
             <label className="shrink-0">Embedded video:</label>
             <div
-                className="resize-none border-b-2 border-solid border-stone-500/50 bg-none text-base text-white"
+                className="resize-none truncate border-b-2 border-solid border-stone-500/50 bg-none text-base text-white"
                 onClick={handleLinkSelect}
                 onBlur={handleLinkBlur}
             >

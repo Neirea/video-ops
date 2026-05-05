@@ -11,6 +11,8 @@
         "noUncheckedIndexedAccess": true,
         "noImplicitOverride": true,
         "module": "NodeNext",
-        "lib": ["ESNext"]
+        "lib": ["ESNext"],
+        "outDir": "./build",
+        "rootDir": "./src"
     }
 }
